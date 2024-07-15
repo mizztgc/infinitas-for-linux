@@ -1,5 +1,5 @@
 # Infinitas for Linux
-An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash and developed by Mizzt
+An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash
 
 ## DISCLAIMER:
 
