@@ -20,6 +20,31 @@ PREFIX_LOCATION="$HOME/.local/share/infinitas"
 ERROR_LABEL="\033[1;91m-> ERROR:\033[0m "
 WARN_LABEL="\033[1;91m-> WARNING:\033[0m "
 
+show_error_msgbox() {
+	case $XDG_CURRENT_DESKTOP in
+		KDE)
+			kdialog --title "Infinity Beat - ERROR" --error "Failed to start game:\n$1" 2>/dev/null
+			;;
+		gnome|GNOME)
+			zenity --title "Failed to Launch Game" --error --text "$1" 2>/dev/null
+			;;
+		*)
+			if [[ -n $(which kdialog 2>/dev/null) ]]; then
+				export XDG_CURRENT_DESKTOP=KDE; show_error_msgbox "$1"
+				return
+			fi
+
+			if [[ $(which zenity 2>/dev/null) ]]; then
+				export XDG_CURRENT_DESKTOP=gnome; show_error_msgbox "$1"
+				return
+			fi
+
+			echo "$1" > /dev/pts/0
+			return
+			;;
+	esac
+}
+
 #################################################################################################################################
 #################################################################################################################################
 # -- INSTALL FUNCTION
