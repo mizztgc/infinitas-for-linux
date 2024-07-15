@@ -445,10 +445,7 @@ launch_cmd() {
 		[[ "${LOGIN_TOKEN:85}" != 'rel=' && "${LOGIN_TOKEN:85}" != 'trial=' ]] && show_error_msgbox "Login string contains an unknown mode: ${LOGIN_TOKEN:85:-1}" && exit 3
 		return 0
 	}
-    apply_audio_settings() {
-		
-    }
-start_infinitas() {
+
 	# check if INFINITAS_USE_GAMESCOPE is set to 1
 	# the if statement below will not stop this check
 	if [[ -n $INFINITAS_USE_GAMESCOPE && $INFINITAS_USE_GAMESCOPE -eq 1 ]]; then
