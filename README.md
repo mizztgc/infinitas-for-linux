@@ -18,9 +18,9 @@ This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a
 This script requires the following dependencies:
 
 - **Web browser of your choice** (Firefox, Chrome, etc.)
-- **wine** (required; self-explanatory | https://www.winehq.org/)
-- **pipewire** (required; for sound | https://pipewire.org/)
-- **xdg-utils** (required; to handle the 'bm2dxinf://' URI))
+- **wine** (required; self-explanatory)
+- **pipewire** (required; for sound)
+- **xdg-utils** (required; to handle the `bm2dxinf://` URI)
 - **kdialog** (required; for showing error message boxes)
 - **msitools** (game install only; for extracting the files from the installer)
 - **wget** (game install only; for downloading the installer)
@@ -32,7 +32,7 @@ This script requires the following dependencies:
 
 This script supports the following environment variables:
 
-- **INFINITAS_USE_GAMESCOPE=[0|1]:** Tells the script to start the game within a gamescope session. Recommended if you don't want to constantly adjust your display options to play this game. Requires gamescope to be installed.
+- `INFINITAS_USE_GAMESCOPE`: Tells the script to start the game within a gamescope session. Recommended if you don't want to constantly adjust your display options to play this game. A value of **1** will run the Wine process through gamescope. Requires gamescope to be installed.
 
 ## INSTALLATION:
 
@@ -114,7 +114,7 @@ A: That error indicates you either started the launcher with no launch key, an i
 
 Q: I have no sound!
 
-A: The game process is probably trying to run at a sample rate of 48kHz, which is the reason for having no sound. You can confirm this by running the command `pactl list sink-inputs`, and checking the `node.rate` to see if it reports a value of `1/48000`. In order to have the game output audio, set your sample rate within PipeWire to 44.1kHz. This script will automatically do that for you, but it may not work all the time.
+A: The game process is probably trying to run at a sample rate of 48kHz, which is the reason for having no sound. You can confirm this by running the command `pactl list sink-inputs`, and checking `node.rate` to see if it reports a value of `1/48000`. In order to have the game output audio, set your sample rate within PipeWire to 44.1kHz. This script will automatically do that for you, *but it may not work all the time*.
 
 
 
