@@ -1,7 +1,7 @@
-# infinitas-for-linux
-Infinitas for Linux: An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash and developed by Mizzt
+# Infinitas for Linux:
+An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash and developed by Mizzt
 
--- DISCLAIMER: --
+## DISCLAIMER:
 
 This script is in no way affiliated with, endorsed, nor supported by KONAMI. In order to access the full game outside of trial mode, you must be subscribed to the beatmania IIDX INFINITAS Basic Course. This script will NOT allow you to gain access to things you aren't paying for, nor will the script developer assist you with such actions.
 
@@ -9,34 +9,36 @@ Like most online games today, getting banned for playing the game on GNU/Linux (
 
 Play at your own risk.
 
--- WHAT DOES THIS SCRIPT DO? --
+## WHAT DOES THIS SCRIPT DO?
 
 This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a PC rhythm game based on their already established arcade franchise of the same name, using Wine. It manages launching the game from the e-amusement website by passing the 'bm2dxinf://' URI to the launcher. This URI acts as a temporary login token, so you can log on with your KONAMI ID and have all your scores and purchased song packs synced over. It also proves an indicator of what mode you want to launch the game in (see GAME MODE BREAKDOWNS for more information).
 
--- DEPENDENCIES: --
+## DEPENDENCIES:
 
 This script requires the following dependencies:
-    - Web browser of your choice (Firefox, Chrome, etc.)\n
-    - wine        (self-explanatory | https://www.winehq.org/)\n 
-    - pipewire    (for sound | https://pipewire.org/)\n
-    - xdg-utils   (to handle the 'bm2dxinf://' URI | https://www.freedesktop.org/wiki/Software/xdg-utils/)\n
-    - kdialog     (for showing error message boxes | https://github.com/KDE/kdialog)\n
-    - msitools    (game install only; for extracting the files from the installer | https://wiki.gnome.org/msitools)\n
-    - wget        (game install only; for downloading the installer | https://www.gnu.org/software/wget/)\n
-    - tar         (game install only; for extracting the files for DXVK | https://www.gnu.org/software/tar/)\n
-    - gamescope   (optional; for running the game within a gamescope session | https://github.com/ValveSoftware/gamescope)\n
 
--- ENVIRONMENT VARIABLES: --
+- Web browser of your choice (Firefox, Chrome, etc.)
+- wine        (required; self-explanatory | https://www.winehq.org/)
+- pipewire    (required; for sound | https://pipewire.org/)
+- xdg-utils   (required; to handle the 'bm2dxinf://' URI))
+- kdialog     (required; for showing error message boxes)
+- msitools    (game install only; for extracting the files from the installer)
+- wget        (game install only; for downloading the installer)
+- tar         (game install only; for extracting the files for DXVK)
+- gamescope   (optional; for running the game within a gamescope session)
+
+
+## ENVIRONMENT VARIABLES:
 
 This script supports the following environment variables:
 
-   - INFINITAS_USE_GAMESCOPE=[0|1]: Tells the script to start the game within a gamescope session. Recommended if you don't want to constantly adjust your display options to play this game. Requires gamescope to be installed.
+- INFINITAS_USE_GAMESCOPE=[0|1]: Tells the script to start the game within a gamescope session. Recommended if you don't want to constantly adjust your display options to play this game. Requires gamescope to be installed.
 
--- INSTALLATION: --
+## INSTALLATION:
 
 To download and install the game files, run 'infinitas install', and let it work its magic. As of right now, the installer will only use your system's build of Wine, and will install the game to '~/.local/share/infinitas' by default. Whenever I decide to stop procrastinating, I'll add the ability.
 
--- Q/A: --
+## Q/A:
 
 Q: How much is the beatmania IIDX INFINITAS Basic Course subscription?
 A: The subscription for this game is ¥1628/month.
