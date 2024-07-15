@@ -1,7 +1,6 @@
 #!/bin/sh
 
 copy_files() {
-	echo "uwu"
 	set -e
 	echo -e "\033[1mInstalling files, please wait...\033[0m"
 	hicolor_dir="/usr/share/icons/hicolor"
