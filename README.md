@@ -7,17 +7,17 @@ This script is in no way affiliated with, endorsed, nor supported by KONAMI. In 
 
 Like most online games today, getting banned for playing the game on GNU/Linux (outside of what the developers intended) is a possibility. The script developer is not to be held responsible, should you receive any bans from use of this script.
 
-Play at your own risk.
+*Play at your own risk.*
 
 ## WHAT DOES THIS SCRIPT DO?
 
-This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a PC rhythm game based on their already established arcade franchise of the same name, using Wine. It manages launching the game from the e-amusement website by passing the 'bm2dxinf://' URI to the launcher. This URI acts as a temporary login token, so you can log on with your KONAMI ID and have all your scores and purchased song packs synced over. It also proves an indicator of what mode you want to launch the game in (see GAME MODE BREAKDOWNS for more information).
+This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a PC rhythm game based on their already established arcade franchise of the same name, using Wine. It manages launching the game from the e-amusement website by passing the `bm2dxinf://` URI to the launcher. This URI acts as a temporary login token, so you can log on with your KONAMI ID and have all your scores and purchased song packs synced over. It also proves an indicator of what mode you want to launch the game in: `trial`, and `rel` mode.
 
 ## DEPENDENCIES:
 
 This script requires the following dependencies:
 
-- Web browser of your choice (Firefox, Chrome, etc.)
+- **Web browser of your choice** (Firefox, Chrome, etc.)
 - **wine** (required; self-explanatory | https://www.winehq.org/)
 - **pipewire** (required; for sound | https://pipewire.org/)
 - **xdg-utils** (required; to handle the 'bm2dxinf://' URI))
@@ -32,11 +32,11 @@ This script requires the following dependencies:
 
 This script supports the following environment variables:
 
-- INFINITAS_USE_GAMESCOPE=[0|1]: Tells the script to start the game within a gamescope session. Recommended if you don't want to constantly adjust your display options to play this game. Requires gamescope to be installed.
+- **INFINITAS_USE_GAMESCOPE=[0|1]:** Tells the script to start the game within a gamescope session. Recommended if you don't want to constantly adjust your display options to play this game. Requires gamescope to be installed.
 
 ## INSTALLATION:
 
-To download and install the game files, run 'infinitas install', and let it work its magic. As of right now, the installer will only use your system's build of Wine, and will install the game to '~/.local/share/infinitas' by default. Whenever I decide to stop procrastinating, I'll add the ability.
+To download and install the game files, run `infinitas install`, and let it work its magic. As of right now, the installer will only use your system's build of Wine, and will install the game to `~/.local/share/infinitas` by default. Whenever I decide to stop procrastinating, I'll add the ability to let you choose your own  build of wine and prefix location.
 
 ## Q/A:
 
@@ -60,7 +60,7 @@ A: As of right now, no.
 
 Q: Is it possible to play the game using gamescope?
 
-A: Yes it is! Do keep in mind that in order to play through gamescope, you must set the environment variable 'INFINITAS_USE_GAMESCOPE' to 1. Passing the script as a gamescope launch argument will kill the gamescope process. This was an intentional decision to prevent any issues if you're that kind of person that uses a Steam Deck or whatever.
+A: Yes it is! Do keep in mind that in order to play through gamescope, you must set the environment variable `INFINITAS_USE_GAMESCOPE` to 1. Passing the script as a gamescope launch argument will kill the gamescope process. This was an intentional decision to prevent any issues if you're that kind of person that uses a Steam Deck or whatever.
 
 
 
@@ -114,7 +114,7 @@ A: That error indicates you either started the launcher with no launch key, an i
 
 Q: I have no sound!
 
-A: The game process is probably trying to run at a sample rate of 48kHz, which is the reason for having no sound. You can confirm this by running the command 'pactl list sink-inputs', and checking the 'node.rate' to see if it reports a value of "1/48000". In order to have the game output audio, set your sample rate within PipeWire to 44.1kHz. This script will automatically do that for you, but it may not work all the time.
+A: The game process is probably trying to run at a sample rate of 48kHz, which is the reason for having no sound. You can confirm this by running the command `pactl list sink-inputs`, and checking the `node.rate` to see if it reports a value of `1/48000`. In order to have the game output audio, set your sample rate within PipeWire to 44.1kHz. This script will automatically do that for you, but it may not work all the time.
 
 
 
