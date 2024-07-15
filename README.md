@@ -78,7 +78,7 @@ A: You're asking the wrong person, buddy.
 
 Q: What's with my access to the game being restricted at certain times?
 
-A: The e-amusement servers go down daily between 05:00~07:00 JST (20:00~22:00 UTC) for maintenance. I know, it sucks, especially given the fact that I live in a timezone where I won't be able to play during the late afternoon hours.
+A: The e-amusement servers go down daily between 05:00-07:00 JST (20:00-22:00 UTC) for maintenance. I know, it sucks, especially given the fact that I live in a timezone where I won't be able to play during the late afternoon hours.
 
 
 
