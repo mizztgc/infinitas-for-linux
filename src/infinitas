@@ -17,8 +17,8 @@ if [[ $UID -eq 0 ]]; then
 fi
 
 PREFIX_LOCATION="$HOME/.local/share/infinitas"
-ERROR_LABEL="\033[1;91m-> ERROR:\033[0m "
-WARN_LABEL="\033[1;91m-> WARNING:\033[0m "
+ERROR_LABEL="\033[1;91m-> ERROR:\033[0m"
+WARN_LABEL="\033[1;91m-> WARNING:\033[0m"
 
 show_error_msgbox() {
 	case $XDG_CURRENT_DESKTOP in
@@ -102,16 +102,16 @@ EOM
 	}
 
     infinitas_install() {
-		log 0 "Downloading beatmania IIDX INFINITAS installer..."
+		echo "Downloading beatmania IIDX INFINITAS installer..."
 		$WGET_EXE "$INFINITAS_LINK"
 		if [[ $? -ne 0 ]]; then
-			log 2 "Failed to download beatmania IIDX INFINITAS installer!"
+			echo -e "$ERROR_LABEL to download beatmania IIDX INFINITAS installer!"
 			cleanup
 			exit 2
 		fi
 
 		# extract files from installer and move them to prefix
-		log 0 "Extracting files from beatmania IIDX INFINITAS installer..."
+		echo "Extracting files from beatmania IIDX INFINITAS installer..."
 		$MSIEXTRACT_EXE "infinitas_installer_2022060800.msi" > /dev/null
 		rm -rf "$TEMP_DIRECTORY/Win"	# remove this dir
 		rm -rf "$TEMP_DIRECTORY/Games/beatmania IIDX INFINITAS/DirectX 9.0c Redist" # and this.
@@ -120,46 +120,46 @@ EOM
 
 		# add registry keys so the launcher doesn't 5-1601-0013 (no registry keys)
 		# obviously have to use wine64 (lulz)
-		log 0 "Applying registry keys..."
+		echo "Applying registry keys..."
 		$WINE64_EXE reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir' /t 'REG_SZ' /d 'C:\\Games\\beatmania IIDX INFINITAS\\' /f
 		$WINE64_EXE reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir' /t 'REG_SZ' /d 'C:\\Games\\beatmania IIDX INFINITAS\\Resource\\' /f
 	}
 
 	vcr2010_install() {
-		log 0 "Downloading Microsoft Visual C++ Redist 2010..."
+		echo "Downloading Microsoft Visual C++ Redist 2010..."
 		$WGET_EXE "$VCS2010_LINK"
 		if [[ $? -ne 0 ]]; then
-			log 2 "Failed to download vcr2010.exe!"
+			echo -e "$ERROR_LABEL Failed to download vcr2010.exe!"
 			cleanup
 			exit 2
 		fi
 
-		log 0 "Installing Microsoft Visual C++ Redist 2010..."
+		echo "Installing Microsoft Visual C++ Redist 2010..."
 		$WINE_EXE $TEMP_DIRECTORY/vcredist*.exe '/quiet'
 		if [[ $? -ne 0 ]]; then
-			log 2 "Failed to install vcr2010!"
+			echo -e "$ERROR_LABEL Failed to install vcr2010!"
 			cleanup
 			exit 2
 		fi
 	}
 
 	dxvk_install() {
-		log 0 "Downloading DXVK..."
+		echo "Downloading DXVK..."
 		$WGET_EXE "$DXVK_LINK"
 		if [[ $? -ne 0 ]]; then
-			log 2 "Failed to download DXVK!"
+			echo -e "$ERROR_LABEL Failed to download DXVK!"
 			cleanup
 			exit 2
 		fi
 
-		log 0 "Extracting DXVK archive..."
+		echo "Extracting DXVK archive..."
 		$TAR_EXE -zxf "$TEMP_DIRECTORY/dxvk-2.4.tar.gz"
 
-		log 0 "Moving .dll files..."
+		echo "Moving .dll files..."
 		cp -f $TEMP_DIRECTORY/dxvk*/x64/d3d9.dll "$INSTALL_LOCATION/drive_c/windows/system32/"
 		cp -f $TEMP_DIRECTORY/dxvk*/x32/d3d9.dll "$INSTALL_LOCATION/drive_c/windows/syswow64/"
 
-		log 0 "Setting overrides..."
+		echo "Setting overrides..."
 		$WINE64_EXE reg add 'HKCU\Software\Wine\DllOverrides' /v 'd3d9' /d 'native,builtin' /f
 		# i'll add these anyways, even though they're unnecessary, since infinitas runs in DX9.0c
 		#$WINE64_EXE reg add 'HKCU\Software\Wine\DllOverrides' /v 'd3d10core' /d 'native,builtin' /f > /dev/null
@@ -168,8 +168,8 @@ EOM
 	}
 
 	set_default_settings() {
-		info 0 "Applying default game settings..."
-		touch "$INSTALL_LOCATION/drive_c/Games/beatmania IIDX INFINITAS/Resource/config/1000_cf.xml"
+		echo "Applying default game settings..."
+		mkdir -p "$INSTALL_LOCATION/drive_c/Games/beatmania IIDX INFINITAS/Resource/config/"
 
 cat >> "$INSTALL_LOCATION/drive_c/Games/beatmania IIDX INFINITAS/Resource/config/1000_cf.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
@@ -432,7 +432,7 @@ EOF
 	set_default_settings	# changes game settings to set audio mode to WASAPI (shared) and video mode to automatic
 	cleanup					# clean up temp files.
 
-	log 0 "\033[1;92mbeatmania IIDX INFINITAS has been successfully installed!\033[0m"
+	echo -e "\033[1;92mbeatmania IIDX INFINITAS has been successfully installed!\033[0m"
 	exit
 }
 
@@ -457,7 +457,7 @@ launch_cmd() {
 	validate_wine() {
 		local v="$($WINE_EXECUTABLE --version)"
 		if [[ ${v:5:1} -lt 9 ]]; then
-			log 2 "This script only supports Wine versions 9.0 and later"
+			echo -e "$ERROR_LABEL This script only supports Wine versions 9.0 and later"
 			show_error_msgbox "Failed to start game:\nbeatmania IIDX INFINITAS requires Wine 9.0 or later"
 			exit 3
 		fi
@@ -476,7 +476,7 @@ launch_cmd() {
 	# the if statement below will not stop this check
 	if [[ -n $INFINITAS_USE_GAMESCOPE && $INFINITAS_USE_GAMESCOPE -eq 1 ]]; then
 		if [[ -n $(which gamescope 2>/dev/null) ]]; then
-			log 0 "config: Using gamescope"
+			echo "config: Using gamescope"
 			GS_CMD="$(which gamescope) -h 1080 -w 1920 -r 120 --framerate-limit 120 -f --"
 			exit # so this script won't try to launch the game again,
 		else
