@@ -16,19 +16,15 @@ This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a
 -- DEPENDENCIES: --
 
 This script requires the following dependencies:
-    \* = required for game
-    \+ = required for game installation only
-    x = optional
-
-    * Web browser of your choice (Firefox, Chrome, etc.)
-    * wine        (self-explanatory | https://www.winehq.org/)
-    * pipewire    (for sound | https://pipewire.org/)
-    * xdg-utils   (to handle the 'bm2dxinf://' URI | https://www.freedesktop.org/wiki/Software/xdg-utils/)
-    * kdialog     (for showing error message boxes | https://github.com/KDE/kdialog)
-    + msitools    (for extracting the files from the installer | https://wiki.gnome.org/msitools)
-    + wget        (for downloading the installer | https://www.gnu.org/software/wget/)
-    + tar         (for extracting the files for DXVK | https://www.gnu.org/software/tar/)
-    x gamescope   (for running the game within a gamescope session | https://github.com/ValveSoftware/gamescope)
+    - Web browser of your choice (Firefox, Chrome, etc.)
+    - wine        (self-explanatory | https://www.winehq.org/)
+    - pipewire    (for sound | https://pipewire.org/)
+    - xdg-utils   (to handle the 'bm2dxinf://' URI | https://www.freedesktop.org/wiki/Software/xdg-utils/)
+    - kdialog     (for showing error message boxes | https://github.com/KDE/kdialog)
+    - msitools    (game install only; for extracting the files from the installer | https://wiki.gnome.org/msitools)
+    - wget        (game install only; for downloading the installer | https://www.gnu.org/software/wget/)
+    - tar         (game install only; for extracting the files for DXVK | https://www.gnu.org/software/tar/)
+    - gamescope   (optional; for running the game within a gamescope session | https://github.com/ValveSoftware/gamescope)
 
 -- ENVIRONMENT VARIABLES: --
 
