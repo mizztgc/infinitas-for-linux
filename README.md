@@ -18,14 +18,14 @@ This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a
 This script requires the following dependencies:
 
 - Web browser of your choice (Firefox, Chrome, etc.)
-- wine        (required; self-explanatory | https://www.winehq.org/)
-- pipewire    (required; for sound | https://pipewire.org/)
-- xdg-utils   (required; to handle the 'bm2dxinf://' URI))
-- kdialog     (required; for showing error message boxes)
-- msitools    (game install only; for extracting the files from the installer)
-- wget        (game install only; for downloading the installer)
-- tar         (game install only; for extracting the files for DXVK)
-- gamescope   (optional; for running the game within a gamescope session)
+- **wine** (required; self-explanatory | https://www.winehq.org/)
+- **pipewire** (required; for sound | https://pipewire.org/)
+- **xdg-utils** (required; to handle the 'bm2dxinf://' URI))
+- **kdialog** (required; for showing error message boxes)
+- **msitools** (game install only; for extracting the files from the installer)
+- **wget** (game install only; for downloading the installer)
+- **tar** (game install only; for extracting the files for DXVK)
+- **gamescope** (optional; for running the game within a gamescope session)
 
 
 ## ENVIRONMENT VARIABLES:
