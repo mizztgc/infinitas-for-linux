@@ -455,7 +455,6 @@ launch_cmd() {
 			exit # so this script won't try to launch the game again,
 		else
 			notify-send "Gamescope not found!" -i "infinitas" -a "beatmania IIDX INFINITAS" "Environment variable INFINITAS_USE_GAMESCOPE is set, but gamescope was not found on your system."
-			fi
 		fi
 	fi
 
