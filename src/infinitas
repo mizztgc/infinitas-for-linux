@@ -444,6 +444,7 @@ EOF
 launch_cmd() {
 	LOGIN_TOKEN="$1"
 	WINE_EXECUTABLE=$(which wine 2>/dev/null)
+	INFINITAS_LAUNCHER="$PREFIX_LOCATION/drive_c/Games/beatmania IIDX INFINITAS/launcher/modules/bm2dx_launcher.exe"
 
 	validate_prefix() {
 		[[ ! -e "$PREFIX_LOCATION" ]] && show_error_msgbox "Couldn't find Wineprefix. Please run '$0 install' in a terminal to install the game." && exit 1
@@ -480,8 +481,8 @@ launch_cmd() {
 			exit # so this script won't try to launch the game again,
 		else
 			notify-send "Gamescope not found!" -i "infinitas" -a "beatmania IIDX INFINITAS" "Environment variable INFINITAS_USE_GAMESCOPE is set, but gamescope was not found on your system."
-		fi
-	fi
+        fi
+    fi
 
 	# Gamescope blocker
 	# This part will terminate gamescope if the script detects it's running within gamescope.
@@ -495,7 +496,7 @@ launch_cmd() {
 	# Time check
 	# This is absolutely necessary to prevent the player from trying to access the game whenever the e-amusement cloud
 	# servers are down for maintenance (between 20:00~22:00 UTC).
-	if [[ $(date -u +%H) -ge 20 && $(date -u +%H) -lt 22 ]]; then
+	if [[ $(date -u +%l) -ge 20 && $(date -u +%l) -lt 22 ]]; then
 		approx_time=$(printf '%(%l:%M%P %Z)T\n' "$(date +%s -u -d "22:00")")
 		if [[ "${approx_time:0:1}" == ' ' ]]; then
 			approx_time="${approx_time:1}"
@@ -515,7 +516,11 @@ launch_cmd() {
 	# PULSE_LATENCY_MSEC to a value above 40ms.
 
 	# and now we run the game.
-	"$GS_CMD" "$WINE_EXECUTABLE" explorer "/destop=InfinityBeat,1920x1080" "$INFINITAS_LAUNCHER" "$LOGIN_TOKEN" &
+	if [[ -n "$GS_CMD" ]]; then
+		"$GS_CMD" "$WINE_EXECUTABLE" explorer "/desktop=INFINITAS,1920x1080" "$INFINITAS_LAUNCHER" "$LOGIN_TOKEN" &
+	else
+		"$WINE_EXECUTABLE" explorer "/desktop=INFINITAS,1920x1080" "$INFINITAS_LAUNCHER" "$LOGIN_TOKEN" &
+	fi
 	wait			# wait for process to end
 	wineserver -k 	# ...and then kill the wineserver
 	# reset audio settings back to default values 								
