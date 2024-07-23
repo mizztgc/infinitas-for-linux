@@ -23,7 +23,7 @@ WARN_LABEL="\033[1;91m-> WARNING:\033[0m"
 show_error_msgbox() {
 	case $XDG_CURRENT_DESKTOP in
 		KDE)
-			kdialog --title "Infinity Beat - ERROR" --error "Failed to start game:\n$1" 2>/dev/null
+			kdialog --title "ERROR" --error "Failed to start game:\n$1" 2>/dev/null
 			;;
 		gnome|GNOME)
 			zenity --title "Failed to Launch Game" --error --text "$1" 2>/dev/null
