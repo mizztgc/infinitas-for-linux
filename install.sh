@@ -49,7 +49,7 @@ check_deps() {
 	[[ -z $(which pipewire 2>/dev/null) ]] && echo "Missing dependency: pipewire" && exit 2
 	[[ -z $(which tar 2>/dev/null) ]] && echo "Missing dependency: tar" && exit 2
 	[[ -z $(which wget 2>/dev/null) ]] && echo "Missing dependency: wget" && exit 2
-	[[ -z $(which gamescope 2>/dev/null) ]] && echo "Missing optional dependency: kdialog"
+	[[ -z $(which gamescope 2>/dev/null) ]] && echo "Missing optional dependency: gamescope"
 	echo "All required dependencies satisfied."
 	return 0
 }
