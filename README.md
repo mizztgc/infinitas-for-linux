@@ -43,7 +43,7 @@ This script supports the following environment variables:
 
 ## INSTALLATION:
 
-To download and install the game files, run `infinitas install`, and let it work its magic. As of right now, the installer will only use your system's build of Wine, and will install the game to `~/.local/share/infinitas` by default. Whenever I decide to stop procrastinating, I'll add the ability to let you choose your own  build of wine and prefix location.
+To download and install the game files, run `infinitas install`, and let it work its magic. As of right now, the installer will only use your system's build of Wine, and will install the game to `~/.local/share/infinitas` by default. Whenever I decide to stop procrastinating, I'll add the ability to let you choose your own build of wine and prefix location.
 
 ## Q/A:
 
@@ -115,7 +115,7 @@ A: The game is probably showing an error message box, usually because it cannot 
 
 Q: What's with the settings menu and error messages showing boxes?
 
-A: This is due to the Wineprefix not having a font to render CJK characters. I'm trying to research a way to include CJK fonts in the prefix, but for the time being, install the necessary fonts through utilities like Winetricks.
+A: This is due to the Wineprefix not having a font to render CJK characters. I'm trying to research a way to include CJK fonts in the prefix, but for the time being, install the necessary fonts through utilities like `winetricks`.
 
 
 
@@ -133,10 +133,10 @@ A: That error indicates you either started the launcher with no launch key, an i
 
 Q: I have no sound!
 
-A: ~~The game process is probably trying to run at a sample rate of 48kHz, which is the reason for having no sound. You can confirm this by running the command `pactl list sink-inputs`, and checking `node.rate` to see if it reports a value of `1/48000`. In order to have the game output audio, set your sample rate within PipeWire to 44.1kHz. This script will automatically do that for you, *but it may not work all the time*.~~ Run `winecfg` within `~/.local/share/infinitas`, navigate to "Audio", and then set the default option for **Output device:** to `infinitas`. It's highly recommended that you do this when the actual launcher opens,
+A: ~~The game process is probably trying to run at a sample rate of 48kHz, which is the reason for having no sound. You can confirm this by running the command `pactl list sink-inputs`, and checking `node.rate` to see if it reports a value of `1/48000`. In order to have the game output audio, set your sample rate within PipeWire to 44.1kHz. This script will automatically do that for you, *but it may not work all the time*.~~ Run `winecfg` within `~/.local/share/infinitas`, navigate to "Audio", and then set the default option for **Output device:** to `infinitas`. It's highly recommended that you do this when the actual launcher is opened.
 
 
 
 Q: Why does my audio sound crackly/DistorteD/possessed?
 
-A: You may have PULSE_LATENCY_MSEC set, and its value set to below 40ms. Enjoy the demons that you summoned. Jokes aside, this may also happen if you don't have this environment variable set, but it may not be noticeable, unless you play certain songs. My recommendation is to set `PULSE_LATENCY_MSEC` to a value that is >= 35.
+A: You may have `PULSE_LATENCY_MSEC` set to below 40ms. Enjoy the demons that you summoned. Jokes aside, this may also happen if you don't have this environment variable set, but it may not be noticeable, unless you play certain songs. My recommendation is to use a value that is >= 35ms.
