@@ -27,6 +27,13 @@ This script requires the following dependencies:
 - **tar** (game install only; for extracting the files for DXVK)
 - **gamescope** (optional; for running the game within a gamescope session)
 
+## HOW TO INSTALL:
+```
+git clone https://github.com/mizztgc/infinitas-for-linux/
+cd infinitas-for-linux/
+chmod +x infinitas
+./infinitas install
+```
 
 ## ENVIRONMENT VARIABLES:
 
@@ -42,7 +49,7 @@ To download and install the game files, run `infinitas install`, and let it work
 
 Q: How much is the beatmania IIDX INFINITAS Basic Course subscription?
 
-A: The subscription for this game is ¥1628/month.
+A: The subscription for this game is ¥1628/month. Thankfully enough, the payment processing system KONAMI uses allows the use of foreign credit/debit cards (your bank may require you a one-time code to confirm it).
 
 
 
@@ -66,7 +73,13 @@ A: Yes it is! Do keep in mind that in order to play through gamescope, you must 
 
 Q: Will this script work with other Konaste games?
 
-A: This script is specifically meant for beatmania IIDX INFINITAS, but it should work for other Konaste games, due to them having similar requirements and utilizing similar core technologies, such as Visual C++ 2010.
+A: This script is specifically meant for beatmania IIDX INFINITAS, you're more than welcome to attempt to use this as a base to install other Konaste games, such as SOUND VOLTEX EXCEED GEAR and ボンバーガール (Bomber Girl).
+
+
+
+Q: Can I play this game on a Steam Deck?
+
+A: I don't own a Steam Deck, so I cannot verify if this game will work on it or not. And if it does, **you *MUST* play in desktop mode**.
 
 
 
@@ -78,7 +91,7 @@ A: You're asking the wrong person, buddy.
 
 Q: What's with my access to the game being restricted at certain times?
 
-A: The e-amusement servers go down daily between 05:00-07:00 JST (20:00-22:00 UTC) for maintenance. I know, it sucks, especially given the fact that I live in a timezone where I won't be able to play during the late afternoon hours.
+A: The e-amusement servers go down daily between 05:00-07:00 JST (20:00-22:00 UTC) for maintenance. I know it sucks, especially given the fact that I live in a timezone where I won't be able to play during the late afternoon hours.
 
 
 
@@ -88,9 +101,15 @@ A: This error relates to your display. The game is trying to adjust your display
 
 
 
+Q: Why does this game run in a Wine virtual desktop?
+
+A: The reason was mostly due to gamescope being absolutely finicky, and terminating the compositor (and the Wine server) after you click "Play" on the launcher.
+
+
+
 Q: The game only shows a black screen. What gives?
 
-A: Check behind the window (Alt+Tab). There may be an error message not being drawn in front of the game window. This error message may indicate that the game could not find a suitable audio device and must exit. This happens if you have your audio mode set to exclusive WASAPI and not shared WASAPI.
+A: The game is probably showing an error message box, usually because it cannot find any audio devices due to the game being set to use WASAPI (exclusive).
 
 
 
@@ -114,10 +133,10 @@ A: That error indicates you either started the launcher with no launch key, an i
 
 Q: I have no sound!
 
-A: The game process is probably trying to run at a sample rate of 48kHz, which is the reason for having no sound. You can confirm this by running the command `pactl list sink-inputs`, and checking `node.rate` to see if it reports a value of `1/48000`. In order to have the game output audio, set your sample rate within PipeWire to 44.1kHz. This script will automatically do that for you, *but it may not work all the time*.
+A: ~~The game process is probably trying to run at a sample rate of 48kHz, which is the reason for having no sound. You can confirm this by running the command `pactl list sink-inputs`, and checking `node.rate` to see if it reports a value of `1/48000`. In order to have the game output audio, set your sample rate within PipeWire to 44.1kHz. This script will automatically do that for you, *but it may not work all the time*.~~ Run `winecfg` within `~/.local/share/infinitas`, navigate to "Audio", and then set the default option for **Output device:** to `infinitas`. It's highly recommended that you do this when the actual launcher opens,
 
 
 
 Q: Why does my audio sound crackly/DistorteD/possessed?
 
-A: You may have PULSE_LATENCY_MSEC set, and its value set to below 40ms. Enjoy the demons that you summoned. Jokes aside, this may also happen if you don't have this environment variable set, but it may not be noticeable, unless you play certain songs.
+A: You may have PULSE_LATENCY_MSEC set, and its value set to below 40ms. Enjoy the demons that you summoned. Jokes aside, this may also happen if you don't have this environment variable set, but it may not be noticeable, unless you play certain songs. My recommendation is to set `PULSE_LATENCY_MSEC` to a value that is >= 35.
