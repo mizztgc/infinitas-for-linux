@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # DISCLAIMER:
 # This script is in no way affiliated with, endorsed, nor supported by KONAMI. In order to access the full game outside
@@ -15,10 +15,7 @@
 [[ $UID -eq 0 ]] && echo "This script should not be ran as root." && exit 127
 
 # check dependencies before starting
-[[ -z $(which kdialog 2>/dev/null) ]] && echo "Missing dependency: kdialog" && exit 2
 [[ -z $(which wine 2>/dev/null) ]] && echo "Missing dependency: wine" && exit 2
-[[ -z $(which pipewire 2>/dev/null) ]] && echo "Missing dependency: pipewire" && exit 2
-[[ -z $(which gamescope 2>/dev/null) ]] && echo "Missing optional dependency: gamescope"
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 PREFIX_LOCATION="$HOME/.local/share/infinitas"
@@ -27,41 +24,99 @@ WARN_LABEL="\033[1;92m-> WARNING:\033[0m"
 
 export WINEDLLOVERRIDES="mscoree,mshtml="	# just so wine doesn't try to install mono and gecko
 
+# this is the entire game launcher, right here.
+read -rd '' launcher <<EOF
+#!/bin/bash
+[[ $UID -eq 0 ]] && echo "This script should not be ran as root." && exit 127
+[[ -z \$(which kdialog 2>/dev/null) ]] && echo "Missing dependency: kdialog" && exit 2
+[[ -z \$(which wine 2>/dev/null) ]] && echo "Missing dependency: wine" && exit 2
+[[ -z \$(which pipewire 2>/dev/null) ]] && echo "Missing dependency: pipewire" && exit 2
+
 show_error_msgbox() {
-	case $XDG_CURRENT_DESKTOP in
-		KDE)
-			kdialog --title "ERROR" --error "Failed to start game:\n$1" 2>/dev/null
-			;;
-		gnome|GNOME)
-			zenity --title "Failed to Launch Game" --error --text "$1" 2>/dev/null
-			;;
-		*)
-			if [[ -n $(which kdialog 2>/dev/null) ]]; then
-				export XDG_CURRENT_DESKTOP=KDE; show_error_msgbox "$1"
-				return
-			fi
-
-			if [[ $(which zenity 2>/dev/null) ]]; then
-				export XDG_CURRENT_DESKTOP=gnome; show_error_msgbox "$1"
-				return
-			fi
-
-			echo "$1" > /dev/pts/0
-			return
-			;;
-	esac
+    kdialog --title "ERROR" --error "\$1" 2>/dev/null
 }
 
-#################################################################################################################################
-#################################################################################################################################
-# -- INSTALL FUNCTION
-# -- This function is responsible for creating the Wineprefix and installing IIDX INFINITAS to it, as well as DXVK
-# -- and yes, i'm slapping a whole-ass installer in this script. i don't care about what you have to say.
+LOGIN_TOKEN="\$1"
+export WINEDLLOVERRIDES="mscoree,mshtml="	# just so wine doesn't try to install mono and gecko
+export WINEPREFIX="$PREFIX_LOCATION"
+
+WINE="\$(which wine 2>/dev/null)"
+validate_prefix() {
+    [[ ! -e "\$WINEPREFIX" ]] && show_error_msgbox "Couldn't find Wineprefix" && exit 1
+    [[ ! -e "\$WINEPREFIX/system.reg" ]] && show_error_msgbox "The Wineprefix is corrupted." && exit 2
+    INFINITAS_LAUNCHER="\$WINEPREFIX/drive_c/Games/beatmania IIDX INFINITAS/launcher/modules/bm2dx_launcher.exe"
+    [[ ! -e "\$INFINITAS_LAUNCHER" ]] && show_error_msgbox "Couldn't find beatmania IIDX INFINITAS Launcher." && exit 3
+    return 0
+}
+
+validate_launch_string() {
+    [[ -z \$LOGIN_TOKEN ]] && show_error_msgbox "No login token provided." && exit 1
+    # Fix the launch string if it's surrounded by quote marks (firefox moment lol).
+    [[ "\${LOGIN_TOKEN:0:1}" != 'b' ]] && LOGIN_TOKEN="\${LOGIN_TOKEN:1:-1}" && echo "fixing login string"
+    [[ "\${LOGIN_TOKEN:0:11}" != 'bm2dxinf://' ]] && show_error_msgbox "Invalid login string provided" && exit 2
+    [[ "\${#LOGIN_TOKEN}" -ne 89 && "\${#LOGIN_TOKEN}" -ne 91 ]] && show_error_msgbox "Login string provided is an invalid length" && exit 3
+    [[ "$\{LOGIN_TOKEN:85}" != 'rel=' && "\${LOGIN_TOKEN:85}" != 'trial=' ]] && show_error_msgbox "Login string contains an unknown mode: \${LOGIN_TOKEN:85:-1}" && exit 4
+    return 0
+}
+
+# check if INFINITAS_USE_GAMESCOPE is set to 1
+# the if statement below will not stop this check
+if [[ -n \$INFINITAS_USE_GAMESCOPE && \$INFINITAS_USE_GAMESCOPE -eq 1 ]]; then
+	if [[ -n \$(which gamescope 2>/dev/null) ]]; then
+		echo "Using gamescope"
+		GS_CMD="\$(which gamescope) -h 1080 -w 1920 -r 120 --framerate-limit 120 -f --"
+		exit # so this script won't try to launch the game again,
+	else
+		[[ \$(which notify-send 2>/dev/null) ]] && notify-send "Gamescope not found!" -i "infinitas" -a "beatmania IIDX INFINITAS" "Environment variable INFINITAS_USE_GAMESCOPE is set, but gamescope was not found on your system."
+    fi
+fi
+
+# Gamescope blocker
+# This part will terminate gamescope if the script detects it's running within gamescope.
+# Note: if you want to enable gamescope, do so with INFINITAS_USE_GAMESCOPE=1
+if [[ \$GAMESCOPE_WAYLAND_DISPLAY || \$XDG_CURRENT_DESKTOP == 'gamescope' ]]; then
+	echo -e "\n\n\t\033[1;91m!!! DO NOT RUN THIS SCRIPT DIRECTLY THROUGH GAMESCOPE !!!\033[0m\n\n"
+	killall -ABRT gamescope-wl
+	exit 134
+fi
+
+# Time check
+# This is absolutely necessary to prevent the player from trying to access the game whenever the e-amusement cloud
+# servers are down for maintenance (between 20:00~22:00 UTC).
+if [[ \$(date -u +%l) -ge 20 && \$(date -u +%l) -lt 22 ]]; then
+	approx_time=\$(printf '%(%l:%M%P %Z)T\n' "\$(date +%s -u -d "22:00")")
+	if [[ "\${approx_time:0:1}" == ' ' ]]; then
+		approx_time="\${approx_time:1}"
+	fi
+	show_error_msgbox "The e-amusement Cloud servers are currently down for maintenance.\nPlease wait until \$approx_time and try again."
+	exit 1
+fi
+
+validate_launch_string
+#validate_wine
+validate_prefix
+
+# create loopback device
+pw-loopback -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=infinitas node.description=infinitas audio.rate=44100' &
+export PULSE_SINK='infinitas' # to ensure the wine process defaults to using this loopback instead of your system's defaults.
+export PULSE_LATENCY_MSEC=45  # to ensure the game audio doesn't summon demons
+# and now we run the game.
+if [[ -n "\$GS_CMD" ]]; then
+	"\$GS_CMD" \$WINE explorer "/desktop=INFINITAS,1920x1080" "\$INFINITAS_LAUNCHER" "\$LOGIN_TOKEN"
+else
+	\$WINE explorer "/desktop=INFINITAS,1920x1080" "\$INFINITAS_LAUNCHER" "\$LOGIN_TOKEN"
+fi
+
+sleep 1
+killall -15 pw-loopback # kill loopback device
+exit
+EOF
 
 install_cmd() {
 	[[ -z $(which msiextract 2>/dev/null) ]] && echo "Missing dependency: msitools" && exit 2
 	[[ -z $(which tar 2>/dev/null) ]] && echo "Missing dependency: tar" && exit 2
 	[[ -z $(which wget 2>/dev/null) ]] && echo "Missing dependency: wget" && exit 2
+	[[ -z $(which magick 2>/dev/null) ]] && echo "Missing dependency: imagemagick" && exit 2
 	DXVK_LINK="https://github.com/doitsujin/dxvk/releases/download/v2.4/dxvk-2.4.tar.gz"
 	INFINITAS_LINK="https://d1rc4pwxnc0pe0.cloudfront.net/v2/installer/infinitas_installer_2022060800.msi"
 	VCS2010_LINK="https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe"
@@ -76,6 +131,7 @@ install_cmd() {
 	MSIEXTRACT_EXE=$(which msiextract 2>/dev/null)
 	WGET_EXE=$(which wget 2>/dev/null)
 	TAR_EXE=$(which tar 2>/dev/null)
+	MAGICK_EXE=$(which magick 2>/dev/null)
 
 	show_disclaimer() {
 		echo -e "\n\033[1;4;91mDISCLAIMER: READ BEFORE CONTINUING\033[0;1;91m"
@@ -422,18 +478,49 @@ cat >> "$INSTALL_LOCATION/drive_c/Games/beatmania IIDX INFINITAS/Resource/config
 EOF
     }
 
+    create_icons() {
+		iconLocation="$(find "$INSTALL_LOCATION/drive_c/Games/beatmania IIDX INFINITAS" -type f -name "*.ico")"
+		mkdir tmpIconDir
+		cd tmpIconDir
+		$MAGICK_EXE "$iconLocation" icon.png
+		for index in {0..4}; do
+			dimens=$(file icon-${index}.png | grep -Eo "[[:digit:]]+ *x *[[:digit:]]+")
+			dimens="${dimens% x*}"
+			dest="$HOME/.local/share/icons/hicolor/${dimens}x${dimens}"
+			[[ ! -e "$dest" ]] && mkdir -p "$dest"
+			[[ ! -e "$dest/apps" ]] && mkdir -p "$dest/apps"
+			[[ ! -e "$dest/mimetypes" ]] && mkdir -p "$dest/mimetypes"
+			cp icon-${index}.png "$dest/apps/infinitas.png" 2>/dev/null
+			cp icon-${index}.png "$dest/mimetypes/x-scheme-handler-bm2dxinf.png" 2>/dev/null
+		done
+		unset iconLocation dimens dest index
+		cd ..
+		rm -rf tmpIconDir
+	}
+
     create_desktop_file() {
+# launcher that will handle opening the actual game
 cat > $HOME/.local/share/applications/infinitas.desktop <<EOF
 [Desktop Entry]
-Categories=Application;Game;
-Comment=Launch beatmania IIDX INFINITAS
 MimeType=x-scheme-handler/bm2dxinf
-Exec=$WINEPREFIX/$0 %u
+Exec=$WINEPREFIX/infinitas %u
+Icon=infinitas
 NoDisplay=true
-Name=beatmania IIDX INFINITAS
+Name=beatmania IIDX INFINITAS Launcher
 Type=Application
 EOF
 
+# launcher that will open the website
+cat > $HOME/.local/share/applications/infinitas-launcher.desktop <<EOF
+[Desktop Entry]
+Categories=Application;Game;
+Comment=Launch beatmania IIDX INFINITAS
+GenericName=Rhythm Game
+Exec=xdg-open https://p.eagate.573.jp/game/infinitas/2/api/login/login.html
+Icon=infinitas
+Name=beatmania IIDX INFINITAS
+Type=Application
+EOF
         update-desktop-database $HOME/.local/share/applications
     }
 
@@ -470,128 +557,18 @@ EOF
 	vcr2010_install			# download and install visual c++ runtime 2010 to the prefix
 	dxvk_install			# install dxvk to the prefix
 	set_default_settings	# changes game settings to set audio mode to WASAPI (shared) and video mode to automatic
+	create_icons            # creates the icons for the game
 	create_desktop_file     # create the desktop launcher
 	create_mimetype         # create the handler for the bm2dxinf:// URI
 	cleanup					# clean up temp files.
 
-	cp "$SCRIPT_DIR/$0" "$WINEPREFIX" # copy this script to the prefix
+	echo "$launcher" > "$WINEPREFIX/infinitas" # copy the launcher script to the prefix
+	chmod +x "$WINEPREFIX/infinitas"
 
 	echo -e "\033[1;92mbeatmania IIDX INFINITAS has been successfully installed!\033[0m"
-	echo -e "Visit \033[1mhttps://p.eagate.573.jp/game/infinitas/2/api/login/login.html\033[0m in your browser, or run this script again with no arguments to start playing!"
-	echo -e "$WARN_LABEL Make sure to set your prefix's audio output to \033[1minfinitas\033[0m, otherwise you will have no sound. Alternatively, you can set your PipeWire's audio sample rate to 44100Hz."
+	echo -e "Visit \033[1mhttps://p.eagate.573.jp/game/infinitas/2/api/login/login.html\033[0m in your browser to start playing!"
 	exit
 }
 
-#################################################################################################################################
-#################################################################################################################################
-# -- LAUNCH FUNCTION
-# -- This function is responsible for starting the launcher, or opening the launch page if no argument is given
-
-launch_cmd() {
-	LOGIN_TOKEN="$1"
-	WINE_EXECUTABLE=$(which wine 2>/dev/null)
-	INFINITAS_LAUNCHER="$PREFIX_LOCATION/drive_c/Games/beatmania IIDX INFINITAS/launcher/modules/bm2dx_launcher.exe"
-
-	validate_prefix() {
-		[[ ! -e "$PREFIX_LOCATION" ]] && show_error_msgbox "Couldn't find Wineprefix. Please run '$0 install' in a terminal to install the game." && exit 1
-		[[ ! -e "$PREFIX_LOCATION/system.reg" ]] && show_error_msgbox "The Wineprefix is corrupted. Please run '$0 install' in a terminal to reinstall the game." && exit 2
-		[[ ! -e "$INFINITAS_LAUNCHER" ]] && show_error_msgbox "Couldn't find beatmania IIDX INFINITAS Launcher. Please run '$0 install' in a terminal to install the game." && exit 3
-		export WINEPREFIX="$PREFIX_LOCATION"
-		INFINITAS_LAUNCHER="$PREFIX_LOCATION/drive_c/Games/beatmania IIDX INFINITAS/launcher/modules/bm2dx_launcher.exe"
-	}
-
-	validate_wine() {
-		local v="$($WINE_EXECUTABLE --version)"
-		if [[ ${v:5:1} -lt 9 || ${v:5:2} -lt 9 ]]; then
-			echo -e "$ERROR_LABEL This script only supports Wine versions 9.0 and later"
-			show_error_msgbox "Failed to start game:\nbeatmania IIDX INFINITAS requires Wine 9.0 or later"
-			exit 3
-		fi
-	}
-
-	validate_launch_string() {
-    	# Fix the launch string if it's surrounded by quote marks (firefox moment lol).
-		[[ "${LOGIN_TOKEN:0:1}" != 'b' ]] && LOGIN_TOKEN="${LOGIN_TOKEN:1:-1}" && echo "fixing login string"
-		[[ "${LOGIN_TOKEN:0:11}" != 'bm2dxinf://' ]] && show_error_msgbox "Invalid login string provided" && exit 1
-		[[ "${#LOGIN_TOKEN}" -ne 89 && "${#LOGIN_TOKEN}" -ne 91 ]] && show_error_msgbox "Login string provided is an invalid length" && exit 2
-		[[ "${LOGIN_TOKEN:85}" != 'rel=' && "${LOGIN_TOKEN:85}" != 'trial=' ]] && show_error_msgbox "Login string contains an unknown mode: ${LOGIN_TOKEN:85:-1}" && exit 3
-		return 0
-	}
-
-	# check if INFINITAS_USE_GAMESCOPE is set to 1
-	# the if statement below will not stop this check
-	if [[ -n $INFINITAS_USE_GAMESCOPE && $INFINITAS_USE_GAMESCOPE -eq 1 ]]; then
-		if [[ -n $(which gamescope 2>/dev/null) ]]; then
-			echo "config: Using gamescope"
-			GS_CMD="$(which gamescope) -h 1080 -w 1920 -r 120 --framerate-limit 120 -f --"
-			exit # so this script won't try to launch the game again,
-		else
-			notify-send "Gamescope not found!" -i "infinitas" -a "beatmania IIDX INFINITAS" "Environment variable INFINITAS_USE_GAMESCOPE is set, but gamescope was not found on your system."
-        fi
-    fi
-
-	# Gamescope blocker
-	# This part will terminate gamescope if the script detects it's running within gamescope.
-	# Note: if you want to enable gamescope, do so with INFINITAS_USE_GAMESCOPE=1
-	if [[ $GAMESCOPE_WAYLAND_DISPLAY || $XDG_CURRENT_DESKTOP == 'gamescope' ]]; then
-		echo -e "\n\n\t\033[1;91m !!! DO NOT RUN THIS SCRIPT DIRECTLY THROUGH GAMESCOPE !!!\033[0m\n\n"
-		killall -ABRT gamescope-wl
-		exit 134
-	fi
-
-	# Time check
-	# This is absolutely necessary to prevent the player from trying to access the game whenever the e-amusement cloud
-	# servers are down for maintenance (between 20:00~22:00 UTC).
-	if [[ $(date -u +%l) -ge 20 && $(date -u +%l) -lt 22 ]]; then
-		approx_time=$(printf '%(%l:%M%P %Z)T\n' "$(date +%s -u -d "22:00")")
-		if [[ "${approx_time:0:1}" == ' ' ]]; then
-			approx_time="${approx_time:1}"
-		fi
-		show_error_msgbox "The e-amusement Cloud servers are currently down for maintenance.\nPlease wait until $approx_time and try again."
-		exit 1
-	fi
-
-	validate_launch_string
-	validate_wine
-	validate_prefix
-
-	# create loopback device
-    pw-loopback -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=infinitas node.description=infinitas audio.rate=44100' &
-	# and now we run the game.
-	if [[ -n "$GS_CMD" ]]; then
-		"$GS_CMD" "$WINE_EXECUTABLE" explorer "/desktop=INFINITAS,1920x1080" "$INFINITAS_LAUNCHER" "$LOGIN_TOKEN"
-	else
-		"$WINE_EXECUTABLE" explorer "/desktop=INFINITAS,1920x1080" "$INFINITAS_LAUNCHER" "$LOGIN_TOKEN"
-	fi
-
-	sleep 1
-	kill -15 $(jobs -p)  # kill loopback device
-    exit
-}
-
-#################################################################################################################################
-#################################################################################################################################
-# -- INITIAL FUNCTION
-# -- Below is for taking any and all arguments to this script
-
-if [[ ! -e $PREFIX_LOCATION ]]; then
-    echo -e "$WARN_LABEL Directory $PREFIX_LOCATION does not exist."
-    mkdir -p "$PREFIX_LOCATION"
-fi
-
-case "$1" in
-	'install')
-    	install_cmd
-    	exit "$?"
-    	;;
-	bm2dxinf://*|\'bm2dxinf://*)
-		launch_cmd "$1"
-		exit "$?"
-		;;
-	*)
-		echo -e "$ERROR_LABEL Unknown command: $1"
-		exit 1
-		;;
-esac
-
-exec xdg-open "https://p.eagate.573.jp/game/infinitas/2/api/login/login.html"
+# TODO: allow the user to add arguments for reinstalling registry keys, dxvk, etc.
+install_cmd
