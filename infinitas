@@ -17,10 +17,7 @@
 # check dependencies before starting
 [[ -z $(which kdialog 2>/dev/null) ]] && echo "Missing dependency: kdialog" && exit 2
 [[ -z $(which wine 2>/dev/null) ]] && echo "Missing dependency: wine" && exit 2
-[[ -z $(which msiextract 2>/dev/null) ]] && echo "Missing dependency: msitools" && exit 2
 [[ -z $(which pipewire 2>/dev/null) ]] && echo "Missing dependency: pipewire" && exit 2
-[[ -z $(which tar 2>/dev/null) ]] && echo "Missing dependency: tar" && exit 2
-[[ -z $(which wget 2>/dev/null) ]] && echo "Missing dependency: wget" && exit 2
 [[ -z $(which gamescope 2>/dev/null) ]] && echo "Missing optional dependency: gamescope"
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
@@ -62,6 +59,9 @@ show_error_msgbox() {
 # -- and yes, i'm slapping a whole-ass installer in this script. i don't care about what you have to say.
 
 install_cmd() {
+	[[ -z $(which msiextract 2>/dev/null) ]] && echo "Missing dependency: msitools" && exit 2
+	[[ -z $(which tar 2>/dev/null) ]] && echo "Missing dependency: tar" && exit 2
+	[[ -z $(which wget 2>/dev/null) ]] && echo "Missing dependency: wget" && exit 2
 	DXVK_LINK="https://github.com/doitsujin/dxvk/releases/download/v2.4/dxvk-2.4.tar.gz"
 	INFINITAS_LINK="https://d1rc4pwxnc0pe0.cloudfront.net/v2/installer/infinitas_installer_2022060800.msi"
 	VCS2010_LINK="https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe"
