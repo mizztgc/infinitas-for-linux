@@ -25,6 +25,7 @@ This script requires the following dependencies:
 - **msitools** (game install only; for extracting the files from the installer)
 - **wget** (game install only; for downloading the installer)
 - **tar** (game install only; for extracting the files for DXVK)
+- **imagemagick** (game install only; for generating icons)
 - **gamescope** (optional; for running the game within a gamescope session)
 
 ## HOW TO INSTALL:
@@ -32,7 +33,7 @@ This script requires the following dependencies:
 git clone https://github.com/mizztgc/infinitas-for-linux/
 cd infinitas-for-linux/
 chmod +x infinitas
-./infinitas install
+./install.sh
 ```
 
 ## ENVIRONMENT VARIABLES:
@@ -41,15 +42,12 @@ This script supports the following environment variables:
 
 - `INFINITAS_USE_GAMESCOPE`: Tells the script to start the game within a gamescope session. Recommended if you don't want to constantly adjust your display options to play this game. A value of **1** will run the Wine process through gamescope. Requires gamescope to be installed.
 
-## INSTALLATION:
-
-To download and install the game files, run `infinitas install`, and let it work its magic. As of right now, the installer will only use your system's build of Wine, and will install the game to `~/.local/share/infinitas` by default. Whenever I decide to stop procrastinating, I'll add the ability to let you choose your own build of wine and prefix location.
 
 ## Q/A:
 
 Q: How much is the beatmania IIDX INFINITAS Basic Course subscription?
 
-A: The subscription for this game is ¥1628/month. Thankfully enough, the payment processing system KONAMI uses allows the use of foreign credit/debit cards (your bank may require you a one-time code to confirm it).
+A: The subscription for this the basic course subscription is ¥1628/month. Thankfully enough, the payment processing system KONAMI uses allows the use of foreign credit/debit cards (your bank may require a one-time code to confirm the transaction).
 
 
 
@@ -67,7 +65,7 @@ A: As of right now, no.
 
 Q: Is it possible to play the game using gamescope?
 
-A: Yes it is! Do keep in mind that in order to play through gamescope, you must set the environment variable `INFINITAS_USE_GAMESCOPE` to 1. Passing the script as a gamescope launch argument will kill the gamescope process. This was an intentional decision to prevent any issues if you're that kind of person that uses a Steam Deck or whatever.
+A: Yes it is! Do keep in mind that in order to play through gamescope, you must set the environment variable `INFINITAS_USE_GAMESCOPE` to 1. Passing the script as a gamescope launch argument will intentionally kill the gamescope process. This is to prevent any issues if you're that kind of person that uses a Steam Deck to play all their games.
 
 
 
@@ -103,7 +101,7 @@ A: This error relates to your display. The game is trying to adjust your display
 
 Q: Why does this game run in a Wine virtual desktop?
 
-A: The reason was mostly due to gamescope being absolutely finicky, and terminating the compositor (and the Wine server) after you click "Play" on the launcher.
+A: The reason was partially due to gamescope being absolutely finicky and deciding to terminate the compositor (and the Wine server) after you click "Play" on the launcher. Aside from that, it also prevents the game from launching with an incorrect sample rate (and no sound).
 
 
 
@@ -128,12 +126,6 @@ A: Exclusive WASAPI, as its name implies, allows the application have exclusive 
 Q: There's a (1-0) error on the launcher. What does that indicate?
 
 A: That error indicates you either started the launcher with no launch key, an invalid launch key, or one that has already been used. Refresh the e-amusement page in your browser to generate a new one. Remember that these keys can only be used ONCE.
-
-
-
-Q: I have no sound!
-
-A: ~~The game process is probably trying to run at a sample rate of 48kHz, which is the reason for having no sound. You can confirm this by running the command `pactl list sink-inputs`, and checking `node.rate` to see if it reports a value of `1/48000`. In order to have the game output audio, set your sample rate within PipeWire to 44.1kHz. This script will automatically do that for you, *but it may not work all the time*.~~ Run `winecfg` within `~/.local/share/infinitas`, navigate to "Audio", and then set the default option for **Output device:** to `infinitas`. It's highly recommended that you do this when the actual launcher is opened.
 
 
 
