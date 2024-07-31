@@ -32,7 +32,7 @@ This script requires the following dependencies:
 ```
 git clone https://github.com/mizztgc/infinitas-for-linux/
 cd infinitas-for-linux/
-chmod +x infinitas
+chmod +x install.sh
 ./install.sh
 ```
 
