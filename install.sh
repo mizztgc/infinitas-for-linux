@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # DISCLAIMER:
 # This script is in no way affiliated with, endorsed, nor supported by KONAMI. In order to access the full game outside
@@ -26,7 +26,7 @@ export WINEDLLOVERRIDES="mscoree,mshtml="	# just so wine doesn't try to install 
 
 # this is the entire game launcher, right here.
 read -rd '' launcher <<EOF
-#!/bin/bash
+#!/usr/bin/env bash
 [[ $UID -eq 0 ]] && echo "This script should not be ran as root." && exit 127
 [[ -z \$(which kdialog 2>/dev/null) ]] && echo "Missing dependency: kdialog" && exit 2
 [[ -z \$(which wine 2>/dev/null) ]] && echo "Missing dependency: wine" && exit 2
@@ -117,6 +117,9 @@ install_cmd() {
 	[[ -z $(which tar 2>/dev/null) ]] && echo "Missing dependency: tar" && exit 2
 	[[ -z $(which wget 2>/dev/null) ]] && echo "Missing dependency: wget" && exit 2
 	[[ -z $(which magick 2>/dev/null) ]] && echo "Missing dependency: imagemagick" && exit 2
+ 	[[ -z \$(which kdialog 2>/dev/null) ]] && echo "Missing dependency: kdialog" && exit 2
+	[[ -z \$(which wine 2>/dev/null) ]] && echo "Missing dependency: wine" && exit 2
+	[[ -z \$(which pipewire 2>/dev/null) ]] && echo "Missing dependency: pipewire" && exit 2
 	DXVK_LINK="https://github.com/doitsujin/dxvk/releases/download/v2.4/dxvk-2.4.tar.gz"
 	INFINITAS_LINK="https://d1rc4pwxnc0pe0.cloudfront.net/v2/installer/infinitas_installer_2022060800.msi"
 	VCS2010_LINK="https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe"
