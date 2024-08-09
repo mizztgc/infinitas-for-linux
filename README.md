@@ -9,6 +9,8 @@ Like most online games today, getting banned for playing the game on GNU/Linux (
 
 *Play at your own risk.*
 
+It's also worth pointing out I'm still pretty new at this whole GitHub thing, so I may feel lost/confused about some things.
+
 ## WHAT DOES THIS SCRIPT DO?
 
 This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a PC rhythm game based on their already established arcade franchise of the same name, using Wine. It manages launching the game from the e-amusement website by passing the `bm2dxinf://` URI to the launcher. This URI acts as a temporary login token, so you can log on with your KONAMI ID and have all your scores and purchased song packs synced over. It also proves an indicator of what mode you want to launch the game in: `trial`, and `rel` mode.
