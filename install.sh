@@ -27,7 +27,7 @@ export WINEDLLOVERRIDES="mscoree,mshtml="	# just so wine doesn't try to install 
 # this is the entire game launcher, right here.
 read -rd '' launcher <<EOF
 #!/usr/bin/env bash
-[[ $UID -eq 0 ]] && echo "This script should not be ran as root." && exit 127
+[[ \$UID -eq 0 ]] && echo "This script should not be ran as root." && exit 127
 [[ -z \$(which kdialog 2>/dev/null) ]] && echo "Missing dependency: kdialog" && exit 2
 [[ -z \$(which wine 2>/dev/null) ]] && echo "Missing dependency: wine" && exit 2
 [[ -z \$(which pipewire 2>/dev/null) ]] && echo "Missing dependency: pipewire" && exit 2
