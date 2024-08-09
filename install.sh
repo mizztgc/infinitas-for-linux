@@ -37,6 +37,7 @@ show_error_msgbox() {
 }
 
 LOGIN_TOKEN="\$1"
+INFINITAS_LAUNCHER='C:\\Games\\beatmania IIDX INFINITAS\\launcher\\modules\\bm2dx_launcher.exe'
 export WINEDLLOVERRIDES="mscoree,mshtml="	# just so wine doesn't try to install mono and gecko
 export WINEPREFIX="$PREFIX_LOCATION"
 
@@ -44,8 +45,7 @@ WINE="\$(which wine 2>/dev/null)"
 validate_prefix() {
     [[ ! -e "\$WINEPREFIX" ]] && show_error_msgbox "Couldn't find Wineprefix" && exit 1
     [[ ! -e "\$WINEPREFIX/system.reg" ]] && show_error_msgbox "The Wineprefix is corrupted." && exit 2
-    INFINITAS_LAUNCHER="\$WINEPREFIX/drive_c/Games/beatmania IIDX INFINITAS/launcher/modules/bm2dx_launcher.exe"
-    [[ ! -e "\$INFINITAS_LAUNCHER" ]] && show_error_msgbox "Couldn't find beatmania IIDX INFINITAS Launcher." && exit 3
+    [[ ! -e "\$WINEPREFIX/drive_c/Games/beatmania IIDX INFINITAS/launcher/modules/bm2dx_launcher.exe" ]] && show_error_msgbox "Couldn't find beatmania IIDX INFINITAS Launcher." && exit 3
     return 0
 }
 
