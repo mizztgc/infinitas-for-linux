@@ -109,7 +109,7 @@ A: The reason was partially due to gamescope being absolutely finicky and decidi
 
 Q: The game only shows a black screen. What gives?
 
-A: The game is probably showing an error message box, usually because it cannot find any audio devices due to the game being set to use WASAPI (exclusive).
+A: The game is probably showing an error message box, usually because it cannot find any audio devices due to the game being set to use WASAPI (exclusive), or because your display settings are invalid.
 
 
 
