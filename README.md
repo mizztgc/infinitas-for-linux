@@ -28,7 +28,6 @@ This script requires the following dependencies:
 - **wget** (game install only; for downloading the installer)
 - **tar** (game install only; for extracting the files for DXVK)
 - **imagemagick** (game install only; for generating icons)
-- **gamescope** (optional; for running the game within a gamescope session)
 
 ## HOW TO INSTALL:
 ```
