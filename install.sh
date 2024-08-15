@@ -116,7 +116,7 @@ Icon=infinitas
 GenericName=Rhythm Game
 Name=beatmania IIDX INFINITAS
 Type=Application
-Exec=$HOME/.local/share/infinitas/$(basename -- $0) %u
+Exec=$HOME/.local/share/infinitas/infinitas %u
 EOF
 
 	[[ -e $HOME/.local/share/mime/packages/x-scheme-handler-bm2dxinf.xml ]] && echo -e "$WARN_LABEL Overwriting ~/.local/share/mime/packages/x-scheme-handler-bm2dxinf.xml!"
