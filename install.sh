@@ -165,7 +165,7 @@ create_icons() {
 }
 
 if [[ -n "$1" && "$1" == '--flatpak' ]]; then
-	useFlatpak=true
+	declare -x useFlatpak=true
 fi
 
 # adjust settings if the user is on flatpak
@@ -352,8 +352,8 @@ WARN_LABEL="\033[1;93m-> WARNING:\033[0m"
 # this whole thing has been driving me absolutely insane, and i can't stand it anymore.
 # so these are the options you're getting, until i get the help i need.
 prefix_location="$prefixLocation"
-use_flatpak_wine=$useFlatpak
-pulse_latency=40
+use_flatpak_wine=$(echo $useFlatpak)
+#pulse_latency=40
 
 LAUNCH_TOKEN="\$1"
 
