@@ -218,7 +218,8 @@ MSIEXTRACT="$(which msiextract 2>/dev/null)"
 TAR="$(which tar 2>/dev/null)"
 WGET="$(which wget 2>/dev/null)"
 
-export WINEDLLOVERRIDES="mscoree,mshtml="	# just so wine doesn't try to install mono and gecko
+#export WINEDLLOVERRIDES="mscoree,mshtml="	# just so wine doesn't try to install mono and gecko
+# apparently the iidx launcher settings needs mscoree
 
 mkdir -p $tempDir
 cd $tempDir
