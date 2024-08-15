@@ -350,7 +350,7 @@ WARN_LABEL="\033[1;93m-> WARNING:\033[0m"
 # CONFIG:
 # this whole thing has been driving me absolutely insane, and i can't stand it anymore.
 # so these are the options you're getting, until i get the help i need.
-prefix_location="$prefixLocation
+prefix_location="$prefixLocation"
 use_flatpak_wine=$useFlatpak
 pulse_latency=40
 
