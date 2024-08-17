@@ -33,8 +33,8 @@ This script requires the following dependencies:
 ```
 git clone https://github.com/mizztgc/infinitas-for-linux/
 cd infinitas-for-linux/
-chmod +x install.sh
-./install.sh
+chmod +x infinitas
+./infinitas install
 ```
 
-NOTE: If you're using the Flatpak build of Wine, append `--flatpak` to the install script!
+NOTE: If you want to use the Flatpak build of Wine, add `--flatpak` to your arguments!
