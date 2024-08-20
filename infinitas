@@ -493,7 +493,8 @@ create_config() {
 	mkdir -p "$DEFAULT_CONFIG_LOCATION" 2>/dev/null
 cat > "$DEFAULT_CONFIG_LOCATION/bm2dx.conf" <<EOF
 # Infinitas for Linux configuration file
-# https://github.com/mizztgc/infinitas-for-linux/
+# See https://github.com/mizztgc/infinitas-for-linux/wiki/Configuration-File for explanations of
+# each configuration option
 
 EOF
 	echo "prefix=\"$installLocation\"" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
@@ -519,8 +520,8 @@ EOF
 set_vars() {
 	# set the default prefix location if not specified
 	if [[ ! $installLocation ]]; then
-		[[ $useVerbose ]] && echo -e "$INFO_LABEL Setting installLocation to $DEFAULT_CONFIG_LOCATION"
-		declare -g installLocation="$DEFAULT_INSTALL_LOCATION"
+		[[ $useVerbose ]] && echo -e "$INFO_LABEL Setting install location to ${DEFAULT_INSTALL_LOCATION}"
+		declare -g installLocation="${DEFAULT_INSTALL_LOCATION}"
 	fi
 	
 	# check if the install location exists or not
