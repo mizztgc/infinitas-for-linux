@@ -20,7 +20,7 @@ This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a
 This script requires the following dependencies:
 
 - **Web browser of your choice** (Firefox, Chrome, etc.)
-- **wine** (required; self-explanatory)
+- **wine >=9.0** (required; self-explanatory)
 - **pipewire** (required; for sound)
 - **xdg-utils** (required; to handle the `bm2dxinf://` URI)
 - **kdialog** (required; for showing error message boxes)
