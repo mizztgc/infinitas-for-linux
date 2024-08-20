@@ -901,10 +901,8 @@ case $InstallCmd in
 		echo -e "$INFO_LABEL Extracting DXVK archive..."
 		tar -zxf $(basename -- $DXVK_LINK) 2>/dev/null
 		echo -e "$INFO_LABEL Moving .dll files from archive..."
-		cp -f $TEMP_DIRECTORY/dxvk*/x64/*.dll "$($WINEPATH -u 'C:\\windows\\system32')"
-		cp -f $TEMP_DIRECTORY/dxvk*/x32/*.dll "$($WINEPATH -u 'C:\\windows\\syswow64')"
-		#cp -f $TEMP_DIRECTORY/dxvk*/x64/d3d9.dll "$installLocation/dosdevices/c:/windows/system32/"
-		#cp -f $TEMP_DIRECTORY/dxvk*/x32/d3d9.dll "$installLocation/dosdevices/c:/windows/syswow64/"
+		cp -Lf $TEMP_DIRECTORY/dxvk*/x64/d3d9.dll "$installLocation/dosdevices/c:/windows/system32/"
+		cp -Lf $TEMP_DIRECTORY/dxvk*/x32/d3d9.dll "$installLocation/dosdevices/c:/windows/syswow64/"
 		$WINE reg add 'HKCU\Software\Wine\DllOverrides' /v 'd3d9' /d 'native,builtin'
 
 		create_icons
