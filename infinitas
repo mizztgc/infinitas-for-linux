@@ -104,30 +104,33 @@ dependency_check() {
 	declare -a missingDeps
 	declare -a missingOptDeps
 
-	[[ ! $useFlatpak ]] && [[ -z $(which wine 2>/dev/null) ]] && missingDeps+='\033[1;91mwine\033[0m '
-	[[ -z $(which xdg-open 2>/dev/null) ]] && missingDeps+='\033[1;91mxdg-utils\033[0m '
-	[[ -z $(which tar 2>/dev/null) ]] && missingDeps+='\033[1;91mtar\033[0m '
-	[[ -z $(which wget 2>/dev/null) ]] && missingDeps+='\033[1;91mwget\033[0m '
-	[[ -z $(which kdialog 2>/dev/null) ]] && missingDeps+='\033[1;91mkdialog\033[0m '
-	[[ -z $(which msiextract 2>/dev/null) ]] && missingDeps+='\033[1;91mmsitools\033[0m '
-	[[ -z $(which notify-send 2>/dev/null) ]] && missingDeps+='\033[1;91mlibnotify\033[0m '
-	[[ -z $(which pipewire 2>/dev/null) ]] && missingDeps+='\033[1;91mpipewire\033[0m '
-	[[ -z $(which pipewire-pulse 2>/dev/null) ]] && missingDeps+='\033[1;91mpipewire-pulse\033[0m '
-	[[ -z $(which pactl 2>/dev/null) ]] && missingDeps+='\033[1;91mpipewire-pulse (pactl missing)\033[0m '
-	[[ -z $(which pw-loopback 2>/dev/null) ]] && missingDeps+='\033[1;91mpipewire\033[0m '
-	[[ -z $(which magick 2>/dev/null) ]] && missingOptDeps+='\033[1;93mimagemagick\033[0m '
-	[[ -z $(which gamemoderun 2>/dev/null) ]] && missingOptDeps+='\033[1;93mgamemode\033[0m '
-	[[ -z $(which gamescope 2>/dev/null) ]] && missingOptDeps+='\033[1;93mgamescope\033[0m '
+	# DISCLAIMER: The missing dependency names you see here are from the application's associated package
+	# names on Arch Linux. Check your distro's package manager to find the relevant packages.
+	# TODO: Add a way to automatically install the packages
+	[[ ! $useFlatpak ]] && [[ -z $(which wine 2>/dev/null) ]] && missingDeps+='wine '
+	[[ -z $(which xdg-open 2>/dev/null) ]] && missingDeps+='xdg-utils '
+	[[ -z $(which tar 2>/dev/null) ]] && missingDeps+='tar '
+	[[ -z $(which wget 2>/dev/null) ]] && missingDeps+='wget '
+	[[ -z $(which kdialog 2>/dev/null) ]] && missingDeps+='kdialog '
+	[[ -z $(which msiextract 2>/dev/null) ]] && missingDeps+='msitools '
+	[[ -z $(which notify-send 2>/dev/null) ]] && missingDeps+='libnotify '
+	[[ -z $(which pipewire 2>/dev/null) ]] && missingDeps+='pipewire '
+	[[ -z $(which pipewire-pulse 2>/dev/null) ]] && missingDeps+='pipewire-pulse '
+	[[ -z $(which pactl 2>/dev/null) ]] && missingDeps+='libpulse '
+	[[ -z $(which pw-loopback 2>/dev/null) ]] && missingDeps+='pipewire-audio '
+	[[ -z $(which magick 2>/dev/null) ]] && missingOptDeps+='imagemagick '
+	[[ -z $(which gamemoderun 2>/dev/null) ]] && missingOptDeps+='gamemode '
+	[[ -z $(which gamescope 2>/dev/null) ]] && missingOptDeps+='gamescope '
 
 	if [[ ${#missingDeps[@]} -gt 0 || ${#missingOptDeps[@]} -gt 0 ]]; then
 		if [[ ${#missingDeps[@]} -gt 0 ]]; then
 			echo -e "$ERROR_LABEL The following REQUIRED dependencies were not found on your system:"
-			echo -e "${missingDeps}"
+			echo -e "\033[91m${missingDeps}\033[0m"
 		elif [[ ${#missingDeps[@]} -eq 0 && ${#missingOptDeps[@]} -gt 0 ]]; then
 			echo -e "$WARN_LABEL The following OPTIONAL dependencies were not found on your system:"
 		fi
 
-		echo "${missingOptDeps}"
+		echo "\033[93m${missingOptDeps}\033[0m"
 
 		[[ ${#missingDeps[@]} -gt 0 ]] && exit 4
 		echo -e "$INFO_LABEL All required dependencies satisfied."
