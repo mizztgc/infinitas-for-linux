@@ -40,4 +40,4 @@ chmod +x infinitas
 ./infinitas install
 ```
 
-NOTE: If you want to use the Flatpak build of Wine, add `--flatpak` to your arguments!
+NOTE: If you want to use the Flatpak build of Wine, add `--flatpak` to your arguments! **(not recommended)**
