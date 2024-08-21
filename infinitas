@@ -72,12 +72,14 @@ ynPrompt() {
 }
 
 is_game_installed() {
-	#[[ -z $($WINE reg query 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS') ]] && return 1
-	#[[ ! $($WINE reg query 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir') ]] && return 2
-	#[[ ! $($WINE reg query 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir') ]] && return 2
-	[[ ! -d "$installLocation/dosdevices/c:/Games/beatmania IIDX INFINITAS" ]] && return 3
-	[[ ! -d "$installLocation/dosdevices/c:/Games/beatmania IIDX INFINITAS/Resource" ]] && return 3
-	[[ ! -f "$installLocation/dosdevices/c:/Games/beatmania IIDX INFINITAS/launcher/modules/bm2dx_launcher.exe" ]] && return 4
+	# these slow down the execution of the script on flatpak
+	#[[ ! $(${WINE_NOEXPLORER} reg query '/reg:64' 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS') ]] && return 1
+	#[[ ! $(${WINE_NOEXPLORER} reg query '/reg:64' 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir') ]] && return 2
+	#[[ ! $("${WINE_NOEXPLORER}" reg query '/reg:64' 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir') ]] && return 2
+	
+	[[ ! -d "${installLocation}/dosdevices/c:/Games/beatmania IIDX INFINITAS" ]] && return 3
+	[[ ! -d "${installLocation}/dosdevices/c:/Games/beatmania IIDX INFINITAS/Resource" ]] && return 3
+	[[ ! -f "${installLocation}/dosdevices/c:/Games/beatmania IIDX INFINITAS/launcher/modules/bm2dx_launcher.exe" ]] && return 4
 
 	return 0
 }
@@ -89,11 +91,11 @@ source_config() {
 		return 1
 	fi
 	
-	[[ $useVerbose ]] && [[ -f "$DEFAULT_CONFIG_LOCATION/bm2dx.conf" ]] && echo -e "$INFO_LABEL Found $DEFAULT_CONFIG_LOCATION/bm2dx.conf"
-	[[ -f "$DEFAULT_CONFIG_LOCATION/bm2dx.conf" ]] && source "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+	[[ $useVerbose ]] && echo -e "$INFO_LABEL Found configuration file at $DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+	source "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 
-	[[ -n $prefix ]] && declare -g installLocation="$prefix"
-	[[ -n $winebuild ]] && declare -g customWineDir="$winebuild"
+	[[ -n $prefix ]] && declare -g installLocation="${prefix}"
+	[[ -n $custom_wine ]] && declare -g customWineDir="${custom_wine}"
 	[[ -n $use_flatpak && $use_flatpak == 'true' ]] && declare -g useFlatpak="$use_flatpak"
 	return 0
 }
@@ -102,32 +104,30 @@ dependency_check() {
 	declare -a missingDeps
 	declare -a missingOptDeps
 
-	[[ ! $useFlatpak ]] && [[ -z $(which wine 2>/dev/null) ]] && missingDeps+='\033[1;91mwine\033[0m'
-	[[ -z $(which xdg-open 2>/dev/null) ]] && missingDeps+='\033[1;91mxdg-utils\033[0m'
-	[[ -z $(which tar 2>/dev/null) ]] && missingDeps+='\033[1;91mtar\033[0m'
-	[[ -z $(which wget 2>/dev/null) ]] && missingDeps+='\033[1;91mwget\033[0m'
-	[[ -z $(which kdialog 2>/dev/null) ]] && missingDeps+='\033[1;91mkdialog\033[0m'
-	[[ -z $(which msiextract 2>/dev/null) ]] && missingDeps+='\033[1;91mmsitools\033[0m'
-	[[ -z $(which pipewire 2>/dev/null) ]] && missingDeps+='\033[1;91mpipewire\033[0m'
-	[[ -z $(which pw-loopback 2>/dev/null) ]] && missingDeps+='\033[1;91mpipewire\033[0m'
-	[[ -z $(which magick 2>/dev/null) ]] && missingOptDeps+='\033[1;93mimagemagick\033[0m'
-	[[ -z $(which gamemoderun 2>/dev/null) ]] && missingOptDeps+='\033[1;93mgamemode\033[0m'
-	[[ -z $(which gamescope 2>/dev/null) ]] && missingOptDeps+='\033[1;93mgamescope\033[0m'
+	[[ ! $useFlatpak ]] && [[ -z $(which wine 2>/dev/null) ]] && missingDeps+='\033[1;91mwine\033[0m '
+	[[ -z $(which xdg-open 2>/dev/null) ]] && missingDeps+='\033[1;91mxdg-utils\033[0m '
+	[[ -z $(which tar 2>/dev/null) ]] && missingDeps+='\033[1;91mtar\033[0m '
+	[[ -z $(which wget 2>/dev/null) ]] && missingDeps+='\033[1;91mwget\033[0m '
+	[[ -z $(which kdialog 2>/dev/null) ]] && missingDeps+='\033[1;91mkdialog\033[0m '
+	[[ -z $(which msiextract 2>/dev/null) ]] && missingDeps+='\033[1;91mmsitools\033[0m '
+	[[ -z $(which notify-send 2>/dev/null) ]] && missingDeps+='\033[1;91mlibnotify\033[0m '
+	[[ -z $(which pipewire 2>/dev/null) ]] && missingDeps+='\033[1;91mpipewire\033[0m '
+	[[ -z $(which pipewire-pulse 2>/dev/null) ]] && missingDeps+='\033[1;91mpipewire-pulse\033[0m '
+	[[ -z $(which pactl 2>/dev/null) ]] && missingDeps+='\033[1;91mpipewire-pulse (pactl missing)\033[0m '
+	[[ -z $(which pw-loopback 2>/dev/null) ]] && missingDeps+='\033[1;91mpipewire\033[0m '
+	[[ -z $(which magick 2>/dev/null) ]] && missingOptDeps+='\033[1;93mimagemagick\033[0m '
+	[[ -z $(which gamemoderun 2>/dev/null) ]] && missingOptDeps+='\033[1;93mgamemode\033[0m '
+	[[ -z $(which gamescope 2>/dev/null) ]] && missingOptDeps+='\033[1;93mgamescope\033[0m '
 
 	if [[ ${#missingDeps[@]} -gt 0 || ${#missingOptDeps[@]} -gt 0 ]]; then
 		if [[ ${#missingDeps[@]} -gt 0 ]]; then
 			echo -e "$ERROR_LABEL The following REQUIRED dependencies were not found on your system:"
+			echo -e "${missingDeps}"
 		elif [[ ${#missingDeps[@]} -eq 0 && ${#missingOptDeps[@]} -gt 0 ]]; then
 			echo -e "$WARN_LABEL The following OPTIONAL dependencies were not found on your system:"
 		fi
 
-		for d in ${missingDeps}; do
-			echo -e "  ${d}"
-		done
-
-		for d in ${missingOptDeps}; do
-			echo -e "  ${d}"
-		done
+		echo "${missingOptDeps}"
 
 		[[ ${#missingDeps[@]} -gt 0 ]] && exit 4
 		echo -e "$INFO_LABEL All required dependencies satisfied."
@@ -155,9 +155,8 @@ EOM
 
 create_game_config() {
 	# very experimental here
-	#configDir=$($WINEPATH -u "$(wine64 reg query 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir' | tail -n2 | cut -d' ' -f 13-)")
 	echo -e "$INFO_LABEL Creating beatmania IIDX INFINITAS settings file..."
-	configDir="$($WINEPATH -u "$resdir\\config")"
+	configDir="$(${WINEPATH} -u "$resdir\\config")"
 	[[ ! -e "$configDir" ]] && mkdir -p "$configDir"
 cat > "$configDir/1000_cf.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
@@ -497,24 +496,38 @@ cat > "$DEFAULT_CONFIG_LOCATION/bm2dx.conf" <<EOF
 # each configuration option
 
 EOF
-	echo "prefix=\"$installLocation\"" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+	echo "prefix=\"${installLocation}\"" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 	if [[ $customWineDir ]]; then
-		echo "customWineDir=\"$customWineDir\"" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+		echo "custom_wine=\"${customWineDir}\"" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 	else
-		echo "customWineDir=" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+		echo "custom_wine=" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 	fi
 	
 	if [[ $useFlatpak ]]; then
 		echo "use_flatpak=true" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 	else
-		echo "use_flatpak=false" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+		echo "#use_flatpak=false" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 	fi
 
 	echo "use_gamemode=false" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
-	echo -e "#gamescope doesn't play nicely with wine, so it's disabled.\n#use_gamescope=false" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+	echo -e "#g amescope doesn't play nicely with wine, so it's disabled.\n#use_gamescope=false" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 	echo "#pa_latency=40" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 
 	echo -e "$INFO_LABEL Wrote configuration file to $DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+}
+
+create_keys() {
+	echo -e "$INFO_LABEL Creating registry keys..."
+	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\\' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\Resource\\' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' 2>/dev/null
+	if [[ ! $wine_novd ]]; then
+		${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Explorer' /v 'Desktop' /t 'REG_SZ' /d 'Default' /f '/reg:64' 2>/dev/null
+		${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'Default' /t 'REG_SZ' /d '1920x1080' /f '/reg:64' 2>/dev/null
+	else
+		${WINE_NOEXPLORER} reg delete 'HKCU\SOFTWARE\Wine\Explorer' /v 'Desktop' /f '/reg:64' 2>/dev/null
+	fi
+	return 0
 }
 
 set_vars() {
@@ -525,12 +538,12 @@ set_vars() {
 	fi
 	
 	# check if the install location exists or not
-	if [[ -e "$installLocation" ]]; then
+	if [[ -e "${installLocation}" ]]; then
 		if [[ $InstallCmd -eq 1 ]]; then
-			[[ -f "$installLocation/system.reg" || -f "$installLocation/user.reg" ]] && echo -e "$WARN_LABEL Installing beatmania IIDX INFINITAS to an existing Wineprefix is not recommended!"
+			[[ -f "${installLocation}/system.reg" || -f "${installLocation}/user.reg" ]] && echo -e "$WARN_LABEL Installing beatmania IIDX INFINITAS to an existing Wineprefix is not recommended!"
 		fi
 
-		if [[ -n "$(find $installLocation/dosdevices/c:/Games -type f -name 'bm2dx_launcher.exe' 2>/dev/null)" ]]; then
+		if [[ -n "$(find -L ${installLocation}/dosdevices/c:/Games -type f -name 'bm2dx_launcher.exe' 2>/dev/null)" ]]; then
 			if [[ $InstallCmd -eq 1 ]]; then
 				echo -e "$ERROR_LABEL The installer has detected existing files for the beatmania IIDX INFINITAS launcher. Installation cannot continue."
 				exit 4
@@ -546,15 +559,25 @@ set_vars() {
 	else
 		if [[ $InstallCmd -eq 1 ]]; then
 			mkdir -p $installLocation 2>/dev/null
-			[[ $? -eq 0 ]] && echo -e "$INFO_LABEL Created new wineprefix directory at $installLocation"
+			[[ $? -eq 0 ]] && echo -e "$INFO_LABEL Created new wineprefix directory at ${installLocation}"
 		else
-			echo -e "$ERROR_LABEL couldn't find prefix at $installLocation"
+			echo -e "$ERROR_LABEL couldn't find prefix at ${installLocation}"
 			exit 4
 		fi
 	fi
 	
 	if [[ $useFlatpak ]]; then
+		# flatpak warning
 		[[ $useVerbose ]] && echo -e "$INFO_LABEL Attempting to use Flatpak build of Wine..."
+		case "$TERM" in
+			dumb)
+				[[ $(which notify-send 2>/dev/null) ]] && notify-send "Flatpak Warning" -i 'dialog-warning' -a "$(basename -- $0)" "It is NOT RECOMMENDED to use the Flatpak build of Wine with this script! If possible, please use a native Wine build from your distribution or a custom-built one."
+				echo "It is NOT RECOMMENDED to use the Flatpak build of Wine with this script! If possible, please use a native Wine build from your distribution or a custom-built one."
+				;;
+			*)
+				echo -e "$WARN_LABEL It is NOT RECOMMENDED to use the Flatpak build of Wine with this script! If possible, please use a native Wine build from your distribution or a custom-built one."
+				;;
+		esac
 		[[ -z $(which flatpak 2>/dev/null) ]] && echo -e "$ERROR_LABEL Flatpak was not found on your system." && exit 2
 		declare -ag EXTRA_FLATPAK_ARGUMENTS
 		
@@ -569,58 +592,85 @@ set_vars() {
 			exit 2
 		fi
 
-		[[ ! $useVerbose ]] && echo -e "$INFO_LABEL Found Wine (Flatpak)"
-		EXTRA_FLATPAK_ARGUMENTS+=" --env=WINEPREFIX=$installLocation --env=WINEDEBUG='fixme-all' --filesystem=$installLocation --filesystem=$TEMP_DIRECTORY"
-		#[[ $InstallCmd -ne 0 ]] && EXTRA_FLATPAK_ARGUMENTS+=" --env=WINEDLLOVERRIDES='explorer.exe=d'"
+		[[ ! $useVerbose ]] && case "$TERM" in
+			dumb)
+				echo "Found Wine (Flatpak)"
+				;;
+			*)
+				echo -e "$INFO_LABEL Found Wine (Flatpak)"
+				;;
+		esac
+		EXTRA_FLATPAK_ARGUMENTS+=" --env=WINEPREFIX=${installLocation} --env=WINEDEBUG='fixme-all' --env=WINEDLLOVERRIDES='mscoree' --filesystem=${installLocation}:create --filesystem=$TEMP_DIRECTORY"
 		[[ $InstallCmd -eq 0 ]] && EXTRA_FLATPAK_ARGUMENTS+=" --env=DXVK_FRAME_RATE=120"
-		WINE="flatpak run $EXTRA_FLATPAK_ARGUMENTS --command=wine64 org.winehq.Wine"
-		WINEBOOT="flatpak run $EXTRA_FLATPAK_ARGUMENTS --command=wineboot org.winehq.Wine"
-		WINEPATH="flatpak run $EXTRA_FLATPAK_ARGUMENTS --command=winepath org.winehq.Wine"
-		WINESERVER="flatpak run $EXTRA_FLATPAK_ARGUMENTS --command=wineserver org.winehq.Wine"
-
+		WINE="flatpak run ${EXTRA_FLATPAK_ARGUMENTS} --command=wine64 org.winehq.Wine"
+		WINE_NOEXPLORER="flatpak run ${EXTRA_FLATPAK_ARGUMENTS} --env=WINEDLLOVERRIDES='explorer.exe=d' --command=wine64 org.winehq.Wine" # necessary for not creating an explorer process
+		[[ $InstallCmd -ne 0 ]] && WINEBOOT="flatpak run ${EXTRA_FLATPAK_ARGUMENTS} --command=wineboot org.winehq.Wine"
+		WINEPATH="flatpak run ${EXTRA_FLATPAK_ARGUMENTS} --env=WINEDLLOVERRIDES='explorer.exe=d;services.exe=d' --command=winepath org.winehq.Wine"
+		WINESERVER="flatpak run ${EXTRA_FLATPAK_ARGUMENTS} --command=wineserver org.winehq.Wine"
 	elif [[ $customWineDir ]]; then	# use custom wine build if specified
 		[[ -n $customWineDir ]] && [[ $customWineDir == '/usr' || $customWineDir == '/' ]] && echo -e "$ERROR_LABEL Are you serious?" && exit 100
 	
 		[[ $useVerbose ]] && echo -e "$INFO_LABEL Attempting to use custom Wine build at $customWineDir..."
-		[[ ! -e "$customWineDir" ]] && echo -e "$ERROR_LABEL Custom Wine build directory does not exist" && exit 2
-		[[ ! -d "$customWineDir" ]] && echo -e "$ERROR_LABEL Custom Wine build location is not a directory" && exit 2
+		[[ ! -e "${customWineDir}" ]] && echo -e "$ERROR_LABEL Custom Wine build directory does not exist" && exit 2
+		[[ ! -d "${customWineDir}" ]] && echo -e "$ERROR_LABEL Custom Wine build location is not a directory" && exit 2
 		[[ $useVerbose ]] && echo -e "$INFO_LABEL Found directory at $customWineDir"
 		
-		[[ ! -f "$customWineDir/bin/wine" ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwine\033[0m executable in $customWineDir/bin" && exit 2	# this script uses wine64, but this check is to make sure this wine build is valid
-		[[ ! -f "$customWineDir/bin/wine64" ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwine64\033[0m executable in $customWineDir/bin" && exit 2
-		[[ ! -f "$customWineDir/bin/wineboot" ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwineboot\033[0m executable in $customWineDir/bin" && exit 2
-		[[ ! -f "$customWineDir/bin/winepath" ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwinepath\033[0m executable in $customWineDir/bin" && exit 2
-		[[ ! -f "$customWineDir/bin/wineserver" ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwineserver\033[0m executable in $customWineDir/bin" && exit 2
-		[[ $useVerbose ]] && echo -e "$INFO_LABEL Found all necessary Wine exectuables in $customWineDir"
-		[[ ! $useVerbose ]] && echo -e "$INFO_LABEL Found custom Wine build ($(basename -- $customWineDir))"
-		WINE="$customWineDir/bin/wine64"
-		WINEBOOT="$customWineDir/bin/wineboot"
-		WINEPATH="$customWineDir/bin/winepath"
-		WINESERVER="$customWineDir/bin/wineserver"
+		[[ ! -f "${customWineDir}/bin/wine" ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwine\033[0m executable in ${customWineDir}/bin" && exit 2
+		[[ ! -f "${customWineDir}/bin/wineboot" && $InstallCmd -ne 0 ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwineboot\033[0m executable in ${customWineDir}/bin" && exit 2
+		[[ ! -f "${customWineDir}/bin/winepath" && $InstallCmd -ne 0 ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwinepath\033[0m executable in ${customWineDir}/bin" && exit 2
+		[[ ! -f "${customWineDir}/bin/wineserver" ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwineserver\033[0m executable in ${customWineDir}/bin" && exit 2
+		[[ $useVerbose ]] && echo -e "$INFO_LABEL Found all necessary Wine exectuables in ${customWineDir}"
+		[[ ! $useVerbose ]] && echo -e "$INFO_LABEL Found custom Wine build ($(basename -- ${customWineDir}))"
+
+		if [[ -f ${customWineDir}/bin/wine64 ]]; then
+			WINE="${customWineDir}/bin/wine64"
+		else
+			WINE="${customWineDir}/bin/wine"
+		fi
+		
+		WINE_NOEXPLORER="env WINEDLLOVERRIDES='explorer.exe=d' ${WINE}"
+		[[ $InstallCmd -ne 0 ]] && WINEBOOT="${customWineDir}/bin/wineboot"
+		WINEPATH="env WINEDLLOVERRIDES='explorer.exe=d;services.exe=d' ${customWineDir}/bin/winepath"
+		WINESERVER="${customWineDir}/bin/wineserver"
 	else # use system wine
 		echo -e "$WARN_LABEL Attempting to use system Wine..."
 		[[ -z $(which wine 2>/dev/null) ]] && echo -e "$ERROR_LABEL Wine is not installed on your system" && exit 2
-		[[ -z $(which wine64 2>/dev/null) ]] && echo -e "$ERROR_LABEL Wine is not installed on your system (missing: wine64)" && exit 2
-		[[ -z $(which wineboot 2>/dev/null) ]] && echo -e "$ERROR_LABEL Wine is not installed on your system (missing: wineboot)" && exit 2
-		[[ -z $(which winepath 2>/dev/null) ]] && echo -e "$ERROR_LABEL Wine is not installed on your system (missing: winespath)" && exit 2
+		[[ -z $(which wineboot 2>/dev/null) && $InstallCmd -ne 0 ]] && echo -e "$ERROR_LABEL Wine is not installed on your system (missing: wineboot)" && exit 2
+		[[ -z $(which winepath 2>/dev/null) && $InstallCmd -ne 0 ]] && echo -e "$ERROR_LABEL Wine is not installed on your system (missing: winespath)" && exit 2
 		[[ -z $(which wineserver 2>/dev/null) ]] && echo -e "$ERROR_LABEL Wine is not installed on your system (missing: wineserver)" && exit 2
 		[[ $useVerbose ]] && echo -e "$INFO_LABEL Found all necessary Wine exectuables"
 		[[ ! $useVerbose ]] && echo -e "$INFO_LABEL Found Wine"
-		WINE="$(which wine64)"
-		WINEBOOT="$(which wineboot)"
-		WINEPATH="$(which winepath)"
+
+		# some distros do not have a wine64 executable, so use the normal wine executable if possible
+		if [[ -n $(which wine64 2>/dev/null) ]]; then
+			WINE="$(which wine64)"
+		else
+			WINE="$(which wine)"
+		fi
+		WINE_NOEXPLORER="env WINEDLLOVERRIDES='explorer.exe=d' ${WINE}"
+		[[ $InstallCmd -ne 0 ]] && WINEBOOT="$(which wineboot)"
+		WINEPATH="env WINEDLLOVERRIDES='explorer.exe=d;services.exe=d' $(which winepath)"
 		WINESERVER="$(which wineserver)"
 	fi
 
 	# display info about everything if verbose is enabled
-	[[ $useVerbose && ! $useFlatpak ]] && echo -e "$INFO_LABEL All installer variables have been set!\nwine: $WINE\nwineboot: $WINEBOOT\nwinepath: $WINEPATH\nwineserver: $WINESERVER\n"
-	[[ $useVerbose ]] && echo "install location: $installLocation"
+	[[ $useVerbose && ! $useFlatpak ]] && echo -e "$INFO_LABEL All installer variables have been set!\nwine: ${WINE}\nwineboot: ${WINEBOOT}\nwinepath: ${WINEPATH}\nwineserver: ${WINESERVER}\n"
+	[[ $useVerbose ]] && echo "install location: ${installLocation}"
 
 	# set exports if not using flatpak
-	[[ ! $useFlatpak ]] && export WINEPREFIX="$installLocation"
+	[[ ! $useFlatpak ]] && export WINEPREFIX="${installLocation}"
 	[[ ! $useFlatpak ]] && export WINEDEBUG='fixme-all'
-	[[ ! $useFlatpak ]] && export DXVK_FRAME_RATE=120
+	[[ ! $useFlatpak && $InstallCmd -eq 0 ]] && export DXVK_FRAME_RATE=120
+	[[ ! $useFlatpak ]] && export WINEDLLOVERRIDES='mscoree'
 	#[[ ! $useFlatpak ]] && export DXVK_HUD='fps'
+
+	# proton-specific exports
+	# dunno why you would want to use it, but whatever
+	#[[ ! $useFlatpak ]] && export PROTON_NO_D3D11=1
+	#[[ ! $useFlatpak ]] && export PROTON_NO_D3D10=1
+	#[[ ! $useFlatpak ]] && export PROTON_NO_ESYNC=1
+	#[[ ! $useFlatpak ]] && export PROTON_NO_FSYNC=1
+	
 
 	# set variables as read only
 	declare -gr instdir='C:\Games\beatmania IIDX INFINITAS'
@@ -628,6 +678,10 @@ set_vars() {
 	declare -r useFlatpak 2>/dev/null
 	declare -r customWineDir 2>/dev/null
 	declare -r installLocation 2>/dev/null
+
+	# some wine versions use weird names, so this script may block some valid wine versions.
+	# sorry.
+	[[ $("${WINE}" --version | cut -d'.' -f1 | cut -c6- ) -lt 9 ]] && echo -e "$ERROR_LABEL This script requires Wine 9.0 or later." && exit 9
 	return 0
 }
 
@@ -646,13 +700,6 @@ parse_flags() {
 					[[ $customWineDir ]] && echo -e "$ERROR_LABEL \033[1m--flatpak\033[0m and \033[1m--winebuild\033[0m cannot be used at the same time" && exit 1
 					declare -gr useFlatpak=true 2>/dev/null
 					;;
-				native)
-					unset useFlatpak 2>/dev/null
-					declare -gr useFlatpak 2>/dev/null
-					;;
-				#'local')
-				#	declare -gr useLocal=true 2>/dev/null
-				#	;;
 				prefix|prefix=*)
 					[[ -z "${1##*=}" || "${cArg:2}" == 'prefix' ]] && echo -e "$ERROR_LABEL No prefix location specified" && exit 1
 					[[ -n $installLocation ]] && unset installLocation
@@ -663,6 +710,9 @@ parse_flags() {
 					[[ -z "${1##*=}" || "${cArg:2}" == 'winebuild' ]] && echo -e "$ERROR_LABEL No Wine build directory specified" && exit 1
 					[[ -n $customWineDir ]] && unset customWineDir
 					declare -g customWineDir="${1##*=}"
+					;;
+				'no-vd'|'no-virtual-desktop')
+					declare -gr wine_novd=true
 					;;
 				*)
 					echo -e "$ERROR_LABEL Unknown argument \033[0m$cArg\033[0m"
@@ -693,6 +743,7 @@ Install arguments:
   --winebuild: Use a custom build of Wine for installation (cannot be used with --flatpak)
     ex: --winebuild=/path/to/winebuild_dir
   --verbose: Output more information during installation
+  --no-virtual-desktop: Do not run the game through a Wine virtual desktop
 			
 Post-install commands:
   create-icons: Generates the icons for beatmania IIDX INFINITAS (requires imagemagick)
@@ -728,7 +779,6 @@ EOM
 					[[ $InstallCmd ]] && echo -e "$ERROR_LABEL You can only specify one command" && exit 9
 					declare -gr InstallCmd=5
 					;;
-
 				*)
 					echo -e "$ERROR_LABEL Unknown command \033[1m$cArg\033[0m"
 					exit 1		
@@ -740,11 +790,17 @@ EOM
 	unset cArg
 }
 
+# TODO: redo this entire part
+#	- only parse flags when running install function
+#	- only source and parse config file when a login token is passed to this script 
+
 source_config		# source the config file for post-install commands
 parse_flags $@		# parse all arguments and commands
 set_vars			# set script variables and lock them
 case $InstallCmd in
 	0)	# launch game
+		[[ "$TERM" != 'dumb' ]] && echo -e "$ERROR_LABEL Don't try to pass login tokens directly to this script." && exit 1
+	
 		[[ -z $(which kdialog 2>/dev/null) ]] && echo -e "$ERROR_LABEL Cannot find kdialog" && exit 2
 		[[ -z $(which notify-send 2>/dev/null) ]] && echo -e "$ERROR_LABEL Cannot find notify-send" && exit 2
 		[[ -z $(which pw-loopback 2>/dev/null) ]] && echo -e "$ERROR_LABEL Cannot find pw-loopback" && exit 2
@@ -805,15 +861,14 @@ case $InstallCmd in
 			fi
 		fi
 
-		$WINESERVER -p10 # start wineserver and make it persistent for a bit
+		${WINESERVER} -p10 # start wineserver and make it persistent for a bit
 		# start loopback device
 		pw-loopback -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=infinitas node.description=infinitas audio.rate=44100' &
 		export PULSE_SINK='infinitas' # to ensure the wine process defaults to using this loopback instead of your system's defaults.
 		[[ -n $pa_latency ]] && export PULSE_LATENCY_MSEC=$pa_latency
 		
-		#$WINE start explorer
-		$launchParam $WINE start '/high' 'C:\Games\beatmania IIDX INFINITAS\launcher\modules\bm2dx_launcher.exe' "$LAUNCH_TOKEN"	# and now we launch the game
-		$WINESERVER -w 	# wait for wineserver to terminate
+		${launchParam} "${WINE}" start '/high' 'C:\Games\beatmania IIDX INFINITAS\launcher\modules\bm2dx_launcher.exe' "$LAUNCH_TOKEN"	# and now we launch the game
+		"${WINESERVER}" -w 	# wait for wineserver to terminate
 		sleep 1
 		kill -15 $(jobs -p) 2>/dev/null	# kill all processes
 		exit 0
@@ -836,7 +891,7 @@ case $InstallCmd in
 		$WINESERVER -p
 
 		if [[ ! -f "$installLocation/system.reg" ]]; then
-			$WINEBOOT -i 2>/dev/null
+			"${WINEBOOT}" -i 2>/dev/null
 		fi
 
 		# download game files
@@ -850,7 +905,7 @@ case $InstallCmd in
 				exit 2
 			fi
 		fi
-		
+
 		# extract gamefiles
 		echo -e "$INFO_LABEL Extracting files from installer..."
 		msiextract "$TEMP_DIRECTORY/$(basename -- $INFINITAS_LINK)" > /dev/null
@@ -862,9 +917,6 @@ case $InstallCmd in
 		
 		# add registry keys
 		echo -e "$INFO_LABEL Adding registry keys..."
-		$WINE reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\\' /f
-		$WINE reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\Resource\\' /f
-		$WINE reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f
 		sleep 1
 		
 		# download vcr2010
@@ -881,7 +933,7 @@ case $InstallCmd in
 		
 		# install vcr2010
 		echo -e "$INFO_LABEL Installing Microsoft Visual C++ Redist 2010..."
-		$WINE 'vcredist_x64.exe' '/quiet'
+		${WINE} 'vcredist_x64.exe' '/quiet'
 		if [[ $? -ne 0 ]]; then
 			echo -e "$ERROR_LABEL Failed to install Visual C++ Redist 2010!"
 		fi
@@ -902,33 +954,17 @@ case $InstallCmd in
 		echo -e "$INFO_LABEL Extracting DXVK archive..."
 		tar -zxf $(basename -- $DXVK_LINK) 2>/dev/null
 		echo -e "$INFO_LABEL Moving .dll files from archive..."
-		cp -Lf $TEMP_DIRECTORY/dxvk*/x64/d3d9.dll "$installLocation/dosdevices/c:/windows/system32/"
-		cp -Lf $TEMP_DIRECTORY/dxvk*/x32/d3d9.dll "$installLocation/dosdevices/c:/windows/syswow64/"
-		$WINE reg add 'HKCU\Software\Wine\DllOverrides' /v 'd3d9' /d 'native,builtin'
+		cp -Lf $TEMP_DIRECTORY/dxvk*/x64/d3d9.dll "${installLocation}/dosdevices/c:/windows/system32/"
+		cp -Lf $TEMP_DIRECTORY/dxvk*/x32/d3d9.dll "${installLocation}/dosdevices/c:/windows/syswow64/"
+		${WINE_NOEXPLORER} reg add 'HKCU\Software\Wine\DllOverrides' /v 'd3d9' /d 'native,builtin' /f '/reg:64'
 
 		create_icons
 		create_launcher
 		create_config
 		create_game_config
-
-		echo -e "$INFO_LABEL Setting Wine virtual desktop settings..."
-		$WINE reg add 'HKCU\SOFTWARE\Wine\Explorer' /v 'Desktop' /t 'REG_SZ' /d 'Default' /f
-		$WINE reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'Default' /t 'REG_SZ' /d '1920x1080' /f
-
-		#if [[ ! $useLocal || $(sudo -v 2>/dev/null; echo $?) -eq 0 ]]; then
-		#	echo -e "$WARN_LABEL: Root privileges are required to create the launchers, icons, and mimetypes"
-		#	icon_location="$($WINEPATH -u $instdir\\beatmania IIDX INFINITAS.ico)"
-		#	[[ -n $(which sudo 2>/dev/null) && $(sudo -v 2>/dev/null; echo $?) -eq 0 ]] && sudo -E bash -c "$(declare -f create_icons create_launcher); $(declare -g icon_location); create_icons; create_launcher"
-		#	if [[ $? -ne 0 ]]; then
-		#		echo -e "$ERROR_LABEL Failed to create icons and launchers: Permission denied"
-		#		exit 10
-		#	fi
-		#else
-		#	create_icons
-		#	create_launcher
-		#fi
+		create_keys
 		
-		cp -r "$TEMP_DIRECTORY/Games" "$($WINEPATH -u 'C:\\')"
+		cp -Lr "$TEMP_DIRECTORY/Games" "$($WINEPATH -u 'C:\\')"
 		rm -rf "$TEMP_DIRECTORY"
 		$WINESERVER -k
 		
@@ -937,10 +973,10 @@ case $InstallCmd in
 		;;
 
 	2)	# uninstall
+		# TODO: implement this
 		echo -e "$ERROR_LABEL not yet implemented."
 		exit 1
 		;;
-	# TODO: get sudo to work or some shit
 	3) # create icons
 		create_icons
 		;;
@@ -948,14 +984,9 @@ case $InstallCmd in
 		create_launcher
 		;;
 	5) # fix registry keys
-		$WINESERVER -p
-		$WINE reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\\' /f
-		$WINE reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\Resource\\' /f
-		$WINE reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f
-		$WINE reg add 'HKCU\SOFTWARE\Wine\Explorer' /v 'Desktop' /t 'REG_SZ' /d 'Default' /f
-		$WINE reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'Default' /t 'REG_SZ' /d '1920x1080' /f
+		create_keys
 		$WINESERVER -k
-		exit
+		exit 0
 		;;
 esac
 exit $?
