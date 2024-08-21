@@ -22,15 +22,18 @@ This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a
 
 This script requires the following dependencies:
 
-- **Web browser of your choice** (Firefox, Chrome, etc.)
-- **wine >=9.0** (required; self-explanatory)
-- **pipewire** (required; for sound)
-- **xdg-utils** (required; to handle the `bm2dxinf://` URI)
-- **kdialog** (required; for showing error message boxes)
-- **msitools** (game install only; for extracting the files from the installer)
-- **wget** (game install only; for downloading the installer)
-- **tar** (game install only; for extracting the files for DXVK)
-- **imagemagick** (game install only; for generating icons)
+* **Web browser of your choice** (Firefox, Chrome, etc.)
+* **wine >=9.0** (required; this is a game for Windows after all)
+* **pipewire** (required; for sound)
+* **pipewire-pulse** (required; for sound)
+* **pulseaudio-utils** (required; for enabling the loopback device that is needed for audio to work)
+* **libnotify** (required; to show non-intrusive warnings related to configuration)
+* **xdg-utils** (required; to handle the `bm2dxinf://` URI)
+* **kdialog** (required; for showing error message boxes)
+* **msitools** (game install only; for extracting the files from the installer)
+* **wget** (game install only; for downloading the installer)
+* **tar** (game install only; for extracting the files for DXVK)
+* **imagemagick** (game install only; for generating icons)
 
 ## HOW TO INSTALL:
 ```
