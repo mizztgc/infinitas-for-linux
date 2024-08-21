@@ -1,6 +1,9 @@
 # Infinitas for Linux
 An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash
 
+## NOTICE FOR FLATPAK USERS:
+Due to Flatpak's "sandboxed" nature, the installer will have a lot of issues if you install the game to a custom prefix. It is **HIGHLY RECOMMENDED** to use a native build of Wine to play beatmania IIDX INFINITAS.
+
 ## DISCLAIMER:
 
 This script is in no way affiliated with, endorsed, nor supported by KONAMI. In order to access the full game outside of trial mode, you must be subscribed to the beatmania IIDX INFINITAS Basic Course. This script will NOT allow you to gain access to things you aren't paying for, nor will the script developer assist you with such actions.
@@ -13,7 +16,7 @@ It's also worth pointing out I'm still pretty new at this whole GitHub thing, so
 
 ## WHAT DOES THIS SCRIPT DO?
 
-This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a PC rhythm game based on their already established arcade franchise of the same name, using Wine. It manages launching the game from the e-amusement website by passing the `bm2dxinf://` URI to the launcher. This URI acts as a temporary login token, so you can log on with your KONAMI ID and have all your scores and purchased song packs synced over. It also proves an indicator of what mode you want to launch the game in: `trial`, and `rel` mode.
+This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a PC rhythm game based on their already established arcade franchise of the same name, using Wine.
 
 ## DEPENDENCIES:
 
