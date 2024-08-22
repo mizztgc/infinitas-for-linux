@@ -30,6 +30,8 @@ DEFAULT_INSTALL_LOCATION="$HOME/.local/share/infinitas"
 DEFAULT_CONFIG_LOCATION="$HOME/.config/infinitas"
 TEMP_DIRECTORY="/tmp/infinitas"
 
+echo -e "${WARN_LABEL} This script is still under construction. Some changes MAY break script functionality."
+
 ynPrompt() {
 	while true; do
 		pro="$1 ["
@@ -512,6 +514,7 @@ EOF
 		echo "#use_flatpak=false" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 	fi
 
+	echo "use_winevd=true" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 	echo "use_gamemode=false" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 	echo -e "#g amescope doesn't play nicely with wine, so it's disabled.\n#use_gamescope=false" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
 	echo "#pa_latency=40" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
@@ -524,12 +527,7 @@ create_keys() {
 	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\\' /f '/reg:64' 2>/dev/null
 	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\Resource\\' /f '/reg:64' 2>/dev/null
 	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' 2>/dev/null
-	if [[ ! $wine_novd ]]; then
-		${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Explorer' /v 'Desktop' /t 'REG_SZ' /d 'Default' /f '/reg:64' 2>/dev/null
-		${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'Default' /t 'REG_SZ' /d '1920x1080' /f '/reg:64' 2>/dev/null
-	else
-		${WINE_NOEXPLORER} reg delete 'HKCU\SOFTWARE\Wine\Explorer' /v 'Desktop' /f '/reg:64' 2>/dev/null
-	fi
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'Infinitas' /t 'REG_SZ' /d "1920x1080" /f '/reg:64' 2>/dev/null
 	return 0
 }
 
@@ -714,9 +712,6 @@ parse_flags() {
 					[[ -n $customWineDir ]] && unset customWineDir
 					declare -g customWineDir="${1##*=}"
 					;;
-				'no-vd'|'no-virtual-desktop')
-					declare -gr wine_novd=true
-					;;
 				*)
 					echo -e "$ERROR_LABEL Unknown argument \033[0m$cArg\033[0m"
 					exit 1
@@ -730,7 +725,7 @@ cat <<'EOM'
 
 Infinitas for Linux install script by Mizzt (mizztgc)
 https://github.com/mizztgc/infinitas-for-linux
-			
+
 General commands/arguments:
   help: Shows this message
   launch: Launch the game
@@ -738,16 +733,15 @@ General commands/arguments:
 Install commands:
   install: Install beatmania IIDX INFINITAS
   uninstall: Uninstall beatmania IIDX INFINITAS
-		
+
 Install arguments:
-  --flatpak: Use the Flatpak build of Wine over your system's native build (requires flatpak)
+  --flatpak: Use the Flatpak build of Wine over your system's native build (NOT RECOMMENDED)
   --prefix: Set the location of the prefix (default: ~/.local/share/infinitas)
     ex: --prefix=/path/to/prefix
   --winebuild: Use a custom build of Wine for installation (cannot be used with --flatpak)
     ex: --winebuild=/path/to/winebuild_dir
   --verbose: Output more information during installation
-  --no-virtual-desktop: Do not run the game through a Wine virtual desktop
-			
+
 Post-install commands:
   create-icons: Generates the icons for beatmania IIDX INFINITAS (requires imagemagick)
   create-launcher: Generates a new .desktop launcher for opening the game
@@ -831,6 +825,9 @@ case $InstallCmd in
 
 		# make sure the game is installed
 		case $(is_game_installed; echo $?) in
+			0)
+				echo "Found beatmania IIDX INFINITAS Launcher"
+				;;
 			1|2|3)
 				show_error_box "beatmania IIDX INFINITAS is not installed.\nRun '$(basename -- $0) install' in a terminal to install the game." 1
 				;;
@@ -845,32 +842,38 @@ case $InstallCmd in
 		[[ "${LAUNCH_TOKEN:85}" != 'rel=' && "${LAUNCH_TOKEN:85}" != 'trial=' ]] && show_error_box "Login string contains an unknown mode: ${LAUNCH_TOKEN:85:-1}" 4
 
 		# get launch parameters going
-		declare -a launchParam
+		declare -a prelaunchParam
+		declare -a wineParam
+
 
 		if [[ -n $use_gamemode && $use_gamemode == 'true' ]]; then
 			if [[ -n $(which gamemoderun 2>/dev/null) ]]; then
-				launchParam+="$(which gamemoderun)"
+				prelaunchParam+="$(which gamemoderun)"
 			fi
 		fi
 
 		if [[ -n $use_gamescope && $use_gamescope == 'true' ]]; then
 			if [[ -n $(which gamescope 2>/dev/null) ]]; then
 				notify-send "Gamescope Warning" -a "beatmania IIDX INFINITAS" -i "dialog-warning" -t 5000 "Gamescope support is currently experimental and has a lot of issues with Wine. You may also need to manually kill this process when you are done playing."
-				launchParam+=" $(which gamescope) -W 1920 -H 1080 -w 1920 -h 1080 -r 120 --framerate-limit 120 -f --"
+				prelaunchParam+=" $(which gamescope) -W 1920 -H 1080 -w 1920 -h 1080 -r 120 --framerate-limit 120 -f --"
 				sleep 2	# give the user more time to read the warning
 			else
 				notify-send "Gamescope not found!" -a "beatmania IIDX INFINITAS" -i "dialog-warning" "Gamescope support has been enabled in your configuration file, but gamescope was not found on your system."
-				#notify-send "Failed to launch IIDX INFINITAS" -a "beatmania IIDX INFINITAS" -i "dialog-error" "The e-amusement Cloud servers are currently down for maintenance. Please wait until $approx_time and try again."
 			fi
 		fi
 
-		${WINESERVER} -p10 # start wineserver and make it persistent for a bit
+		wineParams+='start /high'
+		if [[ -n $wine_usevd && $wine_usevd == 'true' ]]; then
+			wineParams+=' explorer /desktop=Infinitas'
+		fi
+		launchParam+=" $LAUNCH_TOKEN"
+
+		"${WINESERVER}" -p10 # start wineserver and make it persistent for a bit
 		# start loopback device
 		pw-loopback -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=infinitas node.description=infinitas audio.rate=44100' &
 		export PULSE_SINK='infinitas' # to ensure the wine process defaults to using this loopback instead of your system's defaults.
-		[[ -n $pa_latency ]] && export PULSE_LATENCY_MSEC=$pa_latency
-		
-		${launchParam} "${WINE}" start '/high' 'C:\Games\beatmania IIDX INFINITAS\launcher\modules\bm2dx_launcher.exe' "$LAUNCH_TOKEN"	# and now we launch the game
+		[[ -n $pa_latency ]] && export PULSE_LATENCY_MSEC=$pa_latency	# export pulseaudio latency variable if found in config
+		"${prelaunchParam}" "${WINE}" ${wineParams} 'C:\Games\beatmania IIDX INFINITAS\launcher\modules\bm2dx_launcher.exe' "$LAUNCH_TOKEN"	# and now we launch the game
 		"${WINESERVER}" -w 	# wait for wineserver to terminate
 		sleep 1
 		kill -15 $(jobs -p) 2>/dev/null	# kill all processes
@@ -891,7 +894,7 @@ case $InstallCmd in
 		mkdir $TEMP_DIRECTORY
 		cd $TEMP_DIRECTORY
 
-		$WINESERVER -p
+		"${WINESERVER}" -p
 
 		if [[ ! -f "$installLocation/system.reg" ]]; then
 			"${WINEBOOT}" -i 2>/dev/null
@@ -914,13 +917,14 @@ case $InstallCmd in
 		msiextract "$TEMP_DIRECTORY/$(basename -- $INFINITAS_LINK)" > /dev/null
 		mkdir "$TEMP_DIRECTORY/Games/beatmania IIDX INFINITAS/Resource" 2>/dev/null
 		
-		# delete unnecessary folders, such as the DirectX 9.0c Redist installer
+		# delete unnecessary folders
 		rm -rf "$TEMP_DIRECTORY/Win" 2>/dev/null
+		echo -e "$INFO_LABEL Installing DirectX 9.0c Redist..."
+		"${WINE}" "$TEMP_DIRECTORY/Games/beatmania IIDX INFINITAS/DirectX 9.0c Redist/DXSETUP.exe" '/silent'
+		if [[ $? -ne 0 ]]; then
+			echo -e "$ERROR_LABEL Failed to install DirectX 9.0c Redist!"
+		fi
 		rm -rf "$TEMP_DIRECTORY/Games/beatmania IIDX INFINITAS/DirectX 9.0c Redist" 2>/dev/null
-		
-		# add registry keys
-		echo -e "$INFO_LABEL Adding registry keys..."
-		sleep 1
 		
 		# download vcr2010
 		echo -e "$INFO_LABEL Downloading Microsoft Visual C++ Redist 2010..."
@@ -967,7 +971,7 @@ case $InstallCmd in
 		create_game_config
 		create_keys
 		
-		cp -Lr "$TEMP_DIRECTORY/Games" "$($WINEPATH -u 'C:\\')"
+		cp -Lr "$TEMP_DIRECTORY/Games" "$(${WINEPATH} -u 'C:\\')"
 		rm -rf "$TEMP_DIRECTORY"
 		$WINESERVER -k
 		
@@ -988,7 +992,7 @@ case $InstallCmd in
 		;;
 	5) # fix registry keys
 		create_keys
-		$WINESERVER -k
+		"${WINESERVER}" -k
 		exit 0
 		;;
 esac
