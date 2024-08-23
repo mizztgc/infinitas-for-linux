@@ -863,7 +863,7 @@ case $InstallCmd in
 		fi
 
 		wineParams+='start /high'
-		if [[ -n $wine_usevd && $wine_usevd == 'true' ]]; then
+		if [[ -n $use_winevd && $use_winevd == 'true' ]]; then
 			wineParams+=' explorer /desktop=Infinitas'
 		fi
 		launchParam+=" $LAUNCH_TOKEN"
