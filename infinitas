@@ -14,6 +14,8 @@
 #
 # Play at your own risk.
 
+
+
 [[ "$UID" -eq 0 ]] && echo -e "$ERROR_LABEL This script is not to be ran as the root user." && exit 127
 
 INFO_LABEL="\033[1m-> INFO:\033[0m"
@@ -31,6 +33,10 @@ DEFAULT_CONFIG_LOCATION="$HOME/.config/infinitas"
 TEMP_DIRECTORY="/tmp/infinitas"
 
 echo -e "${WARN_LABEL} This script is still under construction. Some changes MAY break script functionality."
+
+if [[ "$XDG_SESSION_TYPE" == 'wayland' ]]; then
+	echo -e "$WARN_LABEL Avoid playing in a Wayland session."
+fi
 
 ynPrompt() {
 	while true; do
@@ -527,7 +533,20 @@ create_keys() {
 	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\\' /f '/reg:64' 2>/dev/null
 	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\Resource\\' /f '/reg:64' 2>/dev/null
 	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'Infinitas' /t 'REG_SZ' /d "1920x1080" /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'bm2dx.exe' /t 'REG_SZ' /d "1920x1080" /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcompiler_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcompiler_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcsx_43' /t 'REG_SZ' /d 'native' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dx9_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xactengine3_7' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xapofx1_5' /t 'REG_SZ' /d 'native' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xaudio2_7' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\Explorer' /v 'Desktop' /t 'REG_SZ' /d 'bm2dx.exe' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\X11 Driver' /v 'Decorated' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\X11 Driver' /v 'Managed' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
+	# for experimental wayland driver
+	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Drivers' /v 'Graphics' /t 'REG_SZ' /d 'x11,wayland' /f '/reg:64' 2>/dev/null
 	return 0
 }
 
@@ -747,7 +766,6 @@ Install arguments:
 Post-install commands:
   create-icons: Generates the icons for beatmania IIDX INFINITAS (requires imagemagick)
   create-launcher: Generates a new .desktop launcher for opening the game
-  create-script: Generates a new launch script for opening beatmania IIDX INFINITAS
   fix-registry: Fixes the registry keys in the prefix to help the game run
 
 EOM
@@ -874,8 +892,9 @@ case $InstallCmd in
 		# the only real fix for this would be to just play in an Xorg session, but if you insist on using wayland, you should either:
 		#	1. set use_winevd in your config file to 'true'
 		#	2. manually set your refresh rate to 60Hz (or 120Hz if supported)
-		if [[ $XDG_SESSION_TYPE == 'wayland' ]]; then
+		if [[ "$XDG_SESSION_TYPE" == 'wayland' ]]; then
 			notify-send "Wayland Warning" -a "beatmania IIDX INFINITAS" -i "dialog-warning" -t 10000 "It is not recommended to play beatmania IIDX INFINITAS in a Wayland session. Please either play in an Xorg session or set 'use_winevd' in your configuration file to 'true'."
+			declare -x DISPLAY=
 			sleep 2
 		fi
 
@@ -893,7 +912,7 @@ case $InstallCmd in
 		pw-loopback -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=infinitas node.description=infinitas audio.rate=44100' &
 		export PULSE_SINK='infinitas' # to ensure the wine process defaults to using this loopback instead of your system's defaults.
 		[[ -n $pa_latency ]] && export PULSE_LATENCY_MSEC=$pa_latency	# export pulseaudio latency variable if found in config
-		"${prelaunchParam}" "${WINE}" ${wineParams} 'C:\Games\beatmania IIDX INFINITAS\launcher\modules\bm2dx_launcher.exe' "$LAUNCH_TOKEN"	# and now we launch the game
+		"${prelaunchParam}" env LANG=ja_JP.UTF-8 "${WINE}" ${wineParams} 'C:\Games\beatmania IIDX INFINITAS\launcher\modules\bm2dx_launcher.exe' "$LAUNCH_TOKEN" > /dev/null	# and now we launch the game
 		"${WINESERVER}" -w 	# wait for wineserver to terminate
 		sleep 1
 		kill -15 $(jobs -p) 2>/dev/null	# kill all processes
@@ -940,7 +959,7 @@ case $InstallCmd in
 		# delete unnecessary folders
 		rm -rf "$TEMP_DIRECTORY/Win" 2>/dev/null
 		echo -e "$INFO_LABEL Installing DirectX 9.0c Redist..."
-		"${WINE}" "$TEMP_DIRECTORY/Games/beatmania IIDX INFINITAS/DirectX 9.0c Redist/DXSETUP.exe" '/silent'
+		"${WINE}" "$TEMP_DIRECTORY/Games/beatmania IIDX INFINITAS/DirectX 9.0c Redist/DXSETUP.exe" '/silent' 2>dev/null
 		if [[ $? -ne 0 ]]; then
 			echo -e "$ERROR_LABEL Failed to install DirectX 9.0c Redist!"
 		fi
@@ -960,7 +979,7 @@ case $InstallCmd in
 		
 		# install vcr2010
 		echo -e "$INFO_LABEL Installing Microsoft Visual C++ Redist 2010..."
-		${WINE} 'vcredist_x64.exe' '/quiet'
+		"${WINE}" 'vcredist_x64.exe' '/quiet' 2>dev/null
 		if [[ $? -ne 0 ]]; then
 			echo -e "$ERROR_LABEL Failed to install Visual C++ Redist 2010!"
 		fi
@@ -983,7 +1002,7 @@ case $InstallCmd in
 		echo -e "$INFO_LABEL Moving .dll files from archive..."
 		cp -Lf $TEMP_DIRECTORY/dxvk*/x64/d3d9.dll "${installLocation}/dosdevices/c:/windows/system32/"
 		cp -Lf $TEMP_DIRECTORY/dxvk*/x32/d3d9.dll "${installLocation}/dosdevices/c:/windows/syswow64/"
-		${WINE_NOEXPLORER} reg add 'HKCU\Software\Wine\DllOverrides' /v 'd3d9' /d 'native,builtin' /f '/reg:64'
+		${WINE_NOEXPLORER} reg add 'HKCU\Software\Wine\DllOverrides' /v 'd3d9' /d 'native,builtin' /f '/reg:64' 2>dev/null
 
 		create_icons
 		create_launcher
