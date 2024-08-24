@@ -546,7 +546,7 @@ create_keys() {
 # 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\X11 Driver' /v 'Managed' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
 	# for experimental wayland driver
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Drivers' /v 'Graphics' /t 'REG_SZ' /d 'x11,wayland' /f '/reg:64' 2>/dev/null
+	#${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Drivers' /v 'Graphics' /t 'REG_SZ' /d 'x11,wayland' /f '/reg:64' 2>/dev/null
 	return 0
 }
 
@@ -894,7 +894,7 @@ case $InstallCmd in
 		#	2. manually set your refresh rate to 60Hz (or 120Hz if supported)
 		if [[ "$XDG_SESSION_TYPE" == 'wayland' ]]; then
 			notify-send "Wayland Warning" -a "beatmania IIDX INFINITAS" -i "dialog-warning" -t 10000 "It is not recommended to play beatmania IIDX INFINITAS in a Wayland session. Please either play in an Xorg session or set 'use_winevd' in your configuration file to 'true'."
-			declare -x DISPLAY=
+			#declare -x DISPLAY=
 			sleep 2
 		fi
 
