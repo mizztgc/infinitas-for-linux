@@ -533,17 +533,17 @@ create_keys() {
 	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\\' /f '/reg:64' 2>/dev/null
 	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\Resource\\' /f '/reg:64' 2>/dev/null
 	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'bm2dx.exe' /t 'REG_SZ' /d "1920x1080" /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcompiler_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcompiler_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcsx_43' /t 'REG_SZ' /d 'native' /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dx9_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xactengine3_7' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xapofx1_5' /t 'REG_SZ' /d 'native' /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xaudio2_7' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\Explorer' /v 'Desktop' /t 'REG_SZ' /d 'bm2dx.exe' /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\X11 Driver' /v 'Decorated' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\X11 Driver' /v 'Managed' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
+# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'bm2dx.exe' /t 'REG_SZ' /d "1920x1080" /f '/reg:64' 2>/dev/null
+# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcompiler_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
+# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcompiler_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
+# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcsx_43' /t 'REG_SZ' /d 'native' /f '/reg:64' 2>/dev/null
+# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dx9_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
+# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xactengine3_7' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
+# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xapofx1_5' /t 'REG_SZ' /d 'native' /f '/reg:64' 2>/dev/null
+# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xaudio2_7' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
+# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\Explorer' /v 'Desktop' /t 'REG_SZ' /d 'bm2dx.exe' /f '/reg:64' 2>/dev/null
+# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\X11 Driver' /v 'Decorated' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
+# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\X11 Driver' /v 'Managed' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
 	# for experimental wayland driver
 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Drivers' /v 'Graphics' /t 'REG_SZ' /d 'x11,wayland' /f '/reg:64' 2>/dev/null
