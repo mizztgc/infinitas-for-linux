@@ -2,7 +2,7 @@
 An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash
 
 ## NOTICE FOR FLATPAK USERS:
-Due to Flatpak's "sandboxed" nature, you will have many issues pertaining to installing the game, as well as song data (keysounds, videos, overlays, etc). It is **HIGHLY RECOMMENDED** to use a native build of Wine to play beatmania IIDX INFINITAS. That being said, if you're on a stable distro like Debian and/or only have access to versions of Wine older than 9.0, _you may need to upgrade your distro_.
+Support for the Flatpak build of Wine is temporarily disabled until I can discover why installing the base game fails most of the time, and why Bash thinks the variable for the Wine executable is one whole command. In the meantime, you are urged to use a native build of Wine from your distro's package manager, _as long as it's Wine 9.0 or later (you can check by running `wine --version`)_
 
 ## DISCLAIMER:
 
