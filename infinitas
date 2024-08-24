@@ -698,6 +698,8 @@ parse_flags() {
 					declare -gr useVerbose=true 2>/dev/null
 					;;
 				flatpak)
+					echo -e "$ERROR_LABEL Flatpak is disabled because it doesn't want to be normal."
+					exit 99
 					[[ $customWineDir ]] && echo -e "$ERROR_LABEL \033[1m--flatpak\033[0m and \033[1m--winebuild\033[0m cannot be used at the same time" && exit 1
 					declare -gr useFlatpak=true 2>/dev/null
 					;;
@@ -862,9 +864,27 @@ case $InstallCmd in
 			fi
 		fi
 
+		if [[ $useFlatpak ]]; then
+			show_error_box "Flatpak is disabled because it doesn't want to be normal.\nPlease play this game through a native build of Wine." 99
+		fi
+
+		# if you frequently see a 5-1501-0003 error, you can thank xwayland for that. this is because xwayland only
+		# allows applications to run at your currently set refresh rate, which means at either 60 or 120hz, the game will
+		# start up. anything other than that, and you're getting that error code.
+		# the only real fix for this would be to just play in an Xorg session, but if you insist on using wayland, you should either:
+		#	1. set use_winevd in your config file to 'true'
+		#	2. manually set your refresh rate to 60Hz (or 120Hz if supported)
+		if [[ $XDG_SESSION_TYPE == 'wayland' ]]; then
+			notify-send "Wayland Warning" -a "beatmania IIDX INFINITAS" -i "dialog-warning" -t 10000 "It is not recommended to play beatmania IIDX INFINITAS in a Wayland session. Please either play in an Xorg session or set 'use_winevd' in your configuration file to 'true'."
+			sleep 2
+		fi
+
+		# "well why not just force the refresh rate to 120Hz through the registry?"
+		# that has no effect outside of a virtual desktop. it's all xwayland's fault.
+
 		wineParams+='start /high'
 		if [[ -n $use_winevd && $use_winevd == 'true' ]]; then
-			wineParams+=' explorer /desktop=Infinitas'
+			wineParams+=' explorer /desktop=Infinitas,1920x1080'
 		fi
 		launchParam+=" $LAUNCH_TOKEN"
 
