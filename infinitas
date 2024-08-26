@@ -14,23 +14,94 @@
 #
 # Play at your own risk.
 
+##############################################################################################################################
+# for all you linux rhythm nerds out there, if you want to use this script to install other konaste games out there,
+# just uncomment the lines you want here. by default, the lines for beatmania IIDX INFINITAS will be uncommented, because
+# this script was initially created for it.
+# (do not delete DIR_TITLE and SIMPLE_NAME. they're important)
+# TODO: repurpose this script as a way to play konaste games other than iidx infinitas on linux
+##############################################################################################################################
+# -- beatmania IIDX INFINITAS --
+GAME_TITLE='beatmania IIDX INFINITAS'
+DIR_TITLE="${GAME_TITLE}"
+SIMPLE_NAME="infinitas"
+INSTALLER_LINK="https://d1rc4pwxnc0pe0.cloudfront.net/v2/installer/infinitas_installer_2022060800.msi"
+LAUNCH_PAGE="https://p.eagate.573.jp/game/infinitas/2/api/login/login.html"
+LAUNCHER_NAME='bm2dx_launcher'
+URI='bm2dxinf'
 
+# -- SOUND VOLTEX EXCEED GEAR コナステ --
+#GAME_TITLE='SOUND VOLTEX EXCEED GEAR コナステ'
+#DIR_TITLE='SOUND VOLTEX EXCEED GEAR'
+#SIMPLE_NAME="sdvx-exceedgear"
+#INSTALLER_LINK="https://dks1q2aivwkd6.cloudfront.net/vi/installer/sdvx_installer_2022011800.msi"
+#LAUNCH_PAGE="https://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=sdvx"
+#LAUNCHER_NAME='launcher'
+#URI='konaste.sdvx'
+
+# -- DanceDanceRevolution GRANDPRIX --
+#GAME_TITLE='DanceDanceRevolution GRAND PRIX'
+#DIR_TITLE='DanceDanceRevolution'
+#SIMPLE_NAME="ddr-gp"
+#INSTALLER_LINK="https://d2el0dli9l0x2p.cloudfront.net/installer/ddr_installer_2022012601.msi"
+#LAUNCH_PAGE="http://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=ddr"
+#LAUNCHER_NAME='launcher'
+#URI='konaste.ddr'
+
+# -- GITADORA --
+#GAME_TITLE='GITADORA コナステ'
+#DIR_TITLE='GITADORA'
+#SIMPLE_NAME="gitadora"
+#INSTALLER_LINK="https://d1omkh45tn6edw.cloudfront.net/inst/GITADORA_installer.msi"
+#LAUNCH_PAGE="http://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=gitadora"
+#LAUNCHER_NAME='launcher'
+#URI='konaste.gitadora'
+
+# -- ノスタルジア (NOSTALGIA) --
+#GAME_TITLE='ノスタルジア'
+#DIR_TITLE='NOSTALGIA'
+#SIMPLE_NAME="nostalgia"
+#INSTALLER_LINK="https://d26kzmeiv4899f.cloudfront.net/installer/NOSTALGIA_installer.msi"
+#LAUNCH_PAGE="http://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=NOSTALGIA"
+#LAUNCHER_NAME='launcher'
+#URI='konaste.nostalgia'
+
+# -- pop'n music Lively --
+#GAME_TITLE='pop'n music Lively'
+#DIR_TITLE="${GAME_TITLE}"
+#SIMPLE_NAME="popn"
+#INSTALLER_LINK="https://d1twxdn5j8sbm3.cloudfront.net/installer/popn_installer_2021021801.msi"
+#LAUNCH_PAGE="https://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=popn-music"
+#LAUNCHER_NAME='launcher'
+#URI='konaste.popn-music'
+
+# this isn't a rhythm game at all, but it's still being added to this because of that one dude that made the guide for
+# getting this particular game working on linux. without it, i would've thought my dream of getting iidx infinitas
+# working properly on linux wouldn't come true. (it was because of the constant audio sample rate issues lmao)
+# -- ボンバーガール (BomberGirl) --
+#GAME_TITLE='ボンバーガール'
+#DIR_TITLE='BomberGirl'
+#SIMPLE_NAME="bombergirl"
+#INSTALLER_LINK="https://d1q1iflay6y5jj.cloudfront.net/Installer/2021122200_b37bc853/BomberGirl_Installer.msi"
+#LAUNCH_PAGE="https://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=bomber-girl"
+#LAUNCHER_NAME='launcher'
+#URI='konaste.bomber-girl'
+##############################################################################################################################
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+DEFAULT_INSTALL_LOCATION="$HOME/.local/share/konaste"
+DEFAULT_CONFIG_LOCATION="$HOME/.config/konaste"
+TEMP_DIRECTORY="/tmp/konmai_pls"
 
 [[ "$UID" -eq 0 ]] && echo -e "$ERROR_LABEL This script is not to be ran as the root user." && exit 127
 
+# default values and download links
 INFO_LABEL="\033[1m-> INFO:\033[0m"
 ERROR_LABEL="\033[1;91m-> ERROR:\033[0m"
 WARN_LABEL="\033[1;93m-> WARNING:\033[0m"
 
-# default values and download links
 DXVK_LINK="https://github.com/doitsujin/dxvk/releases/download/v2.4/dxvk-2.4.tar.gz"
-INFINITAS_LINK="https://d1rc4pwxnc0pe0.cloudfront.net/v2/installer/infinitas_installer_2022060800.msi"
 VCR2010_LINK="https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe"
-
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-DEFAULT_INSTALL_LOCATION="$HOME/.local/share/infinitas"
-DEFAULT_CONFIG_LOCATION="$HOME/.config/infinitas"
-TEMP_DIRECTORY="/tmp/infinitas"
 
 echo -e "${WARN_LABEL} This script is still under construction. Some changes MAY break script functionality."
 
@@ -85,26 +156,26 @@ is_game_installed() {
 	#[[ ! $(${WINE_NOEXPLORER} reg query '/reg:64' 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir') ]] && return 2
 	#[[ ! $("${WINE_NOEXPLORER}" reg query '/reg:64' 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir') ]] && return 2
 	
-	[[ ! -d "${installLocation}/dosdevices/c:/Games/beatmania IIDX INFINITAS" ]] && return 3
-	[[ ! -d "${installLocation}/dosdevices/c:/Games/beatmania IIDX INFINITAS/Resource" ]] && return 3
-	[[ ! -f "${installLocation}/dosdevices/c:/Games/beatmania IIDX INFINITAS/launcher/modules/bm2dx_launcher.exe" ]] && return 4
+	[[ ! -d "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}" ]] && return 3
+	[[ ! -d "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}/Resource" ]] && return 3
+	[[ ! -f "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}" ]] && return 4
 
 	return 0
 }
 
 # source config file if it exists
 source_config() {
-	if [[ ! -f "$DEFAULT_CONFIG_LOCATION/bm2dx.conf" ]]; then
-		[[ $useVerbose ]] && echo -e "$ERROR_LABEL Couldn't find $DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+	if [[ ! -f "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf" ]]; then
+		[[ $useVerbose ]] && echo -e "$ERROR_LABEL Couldn't find $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 		return 1
 	fi
 	
-	[[ $useVerbose ]] && echo -e "$INFO_LABEL Found configuration file at $DEFAULT_CONFIG_LOCATION/bm2dx.conf"
-	source "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+	[[ $useVerbose ]] && echo -e "$INFO_LABEL Found configuration file at $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+	source "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 
 	[[ -n $prefix ]] && declare -g installLocation="${prefix}"
 	[[ -n $custom_wine ]] && declare -g customWineDir="${custom_wine}"
-	[[ -n $use_flatpak && $use_flatpak == 'true' ]] && declare -g useFlatpak="$use_flatpak"
+	#[[ -n $use_flatpak && $use_flatpak == 'true' ]] && declare -g useFlatpak="$use_flatpak"
 	return 0
 }
 
@@ -138,7 +209,7 @@ dependency_check() {
 			echo -e "$WARN_LABEL The following OPTIONAL dependencies were not found on your system:"
 		fi
 
-		echo "\033[93m${missingOptDeps}\033[0m"
+		echo -e "\033[93m${missingOptDeps}\033[0m"
 
 		[[ ${#missingDeps[@]} -gt 0 ]] && exit 4
 		echo -e "$INFO_LABEL All required dependencies satisfied."
@@ -154,7 +225,7 @@ read -rd '' disclaimer <<EOM
 \n\033[1;91mWARNING:\033[0;1m READ BEFORE CONTINUING:\033[0m\n\n
 
 This script is in no way affiliated with, endorsed, nor supported by KONAMI. In order to access the full game outside\n
-of trial mode, you must be subscribed to the beatmania IIDX INFINITAS Basic Course. This script will NOT allow you to\n
+of trial mode, you must be subscribed to the ${GAME_TITLE} Basic Course. This script will NOT allow you to\n
 gain access to things you aren't paying for, nor will the script developer assist you with such actions.\n\n
 
 Like most online games today, getting banned for playing the game on GNU/Linux (outside of what the developers\n
@@ -165,6 +236,7 @@ this script.\n\n
 EOM
 
 create_game_config() {
+	return 0	# don't wanna deal with this rn
 	# very experimental here
 	echo -e "$INFO_LABEL Creating beatmania IIDX INFINITAS settings file..."
 	configDir="$(${WINEPATH} -u "$resdir\\config")"
@@ -420,11 +492,7 @@ create_icons() {
 	mkdir tmpIconDir
 	cd tmpIconDir
 	
-	if [[ -f "$($WINEPATH -u "$instdir\\beatmania IIDX INFINITAS.ico")" ]]; then
-		icon_location="$($WINEPATH -u "$instdir\\beatmania IIDX INFINITAS.ico")"
-	else
-		icon_location="$(find $TEMP_DIRECTORY/Games -type f -name "*.ico")"
-	fi
+	icon_location="$(find $TEMP_DIRECTORY/Games -type f -name "*.ico")"
 	magick "$icon_location" icon.png
 	if [[ $? -ne 0 ]]; then
 		echo -e "$ERROR_LABEL Failed to create icons"
@@ -438,10 +506,8 @@ create_icons() {
 		[[ ! -e "$dest" ]] && mkdir -p "$dest"
 		[[ ! -e "$dest/apps" ]] && mkdir -p "$dest/apps"
 		[[ ! -e "$dest/mimetypes" ]] && mkdir -p "$dest/mimetypes"
-		#[[ -f "$dest/apps/infinitas.png" ]] && echo -e "$WARN_LABEL Overwriting $dest/apps/infinitas.png!"
-		cp -f icon-${index}.png "$dest/apps/infinitas.png" 2>/dev/null
-		#[[ -f "$dest/mimetypes/x-scheme-handler-bm2dxinf.png" ]] && echo -e "$WARN_LABEL Overwriting $dest/mimetypes/x-scheme-handler-bm2dxinf.png!"
-		cp -f icon-${index}.png "$dest/mimetypes/x-scheme-handler-bm2dxinf.png" 2>/dev/null
+		cp -f icon-${index}.png "$dest/apps/${SIMPLE_NAME}.png" 2>/dev/null
+		cp -f icon-${index}.png "$dest/mimetypes/x-scheme-handler-${URI}.png" 2>/dev/null
 	done
 	unset iconLocation dimens dest index
 	cd ..
@@ -458,37 +524,45 @@ create_launcher() {
 	[[ $UID -eq 0 ]] &&	declare -I appsFolder="/usr/share/applications"
 	[[ $UID -eq 0 ]] &&	declare -I mimeFolder="/usr/share/mime"
 	echo -e "$INFO_LABEL Creating launcher and mimetype..."
-cat > $appsFolder/infinitas-launcher.desktop <<'EOF'
+cat > $appsFolder/"${SIMPLE_NAME}"-launcher.desktop <<EOF
 [Desktop Entry]
-MimeType=x-scheme-handler/bm2dxinf
-Icon=infinitas
-Name=beatmania IIDX INFINITAS Launcher
+MimeType=x-scheme-handler/${URI}
+Icon=${SIMPLE_NAME}
+Name=${GAME_TITLE} Launcher
 NoDisplay=true
 Type=Application
 EOF
 
-cat > $appsFolder/infinitas.desktop <<'EOF'
+cat > $appsFolder/"${SIMPLE_NAME}".desktop <<EOF
 [Desktop Entry]
 Categories=Application;Game;
 Icon=infinitas
-GenericName=Rhythm Game
-Name=beatmania IIDX INFINITAS
+Description=Play ${GAME_TITLE} on Linux
 Type=Application
-Exec=xdg-open https://p.eagate.573.jp/game/infinitas/2/api/login/login.html
+Exec=xdg-open ${LAUNCH_PAGE}
 EOF
 
-	[[ $UID -eq 0 ]] && echo "Exec=$(basename -- $0) %u" >> $appsFolder/infinitas-launcher.desktop
-	[[ $UID -ne 0 ]] && echo "Exec=$SCRIPT_DIR/$(basename -- $0) %u" >> $appsFolder/infinitas-launcher.desktop
+	case "$SIMPLE_NAME" in
+		bombergirl|nostalgia|gitadora|sdvx-exceedgear)
+			echo "Name[ja]=${GAME_TITLE}" >> $appsFolder/"${SIMPLE_NAME}".desktop
+			echo "Name=${DIR_TITLE}" >> $appsFolder/"${SIMPLE_NAME}".desktop
+			;;
+		*)
+			echo "Name=${GAME_TITLE}" >> $appsFolder/"${SIMPLE_NAME}".desktop
+	esac
+
+	[[ $UID -eq 0 ]] && echo "Exec=$(basename -- $0) %u" >> $appsFolder/"${SIMPLE_NAME}"-launcher.desktop
+	[[ $UID -ne 0 ]] && echo "Exec=$SCRIPT_DIR/$(basename -- $0) %u" >> $appsFolder/"${SIMPLE_NAME}"-launcher.desktop
 
 	[[ ! -e $mimeFolder/packages ]] && mkdir "$mimeFolder/packages" 2>/dev/null
-cat > "$mimeFolder/packages/x-scheme-handler-bm2dxinf.xml" <<'EOF'
+cat > "$mimeFolder/packages/x-scheme-handler-${URI}.xml" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
-    <mime-type type="x-scheme-handler/bm2dxinf">
-        <comment>beatmania IIDX INFINITAS</comment>
-        <icon name="x-scheme-handler-bm2dxinf"/>
+    <mime-type type="x-scheme-handler/${URI}">
+        <comment>${GAME_TITLE}</comment>
+        <icon name="x-scheme-handler-${URI}"/>
         <glob-deleteall/>
-        <glob pattern="bm2dxinf://*"/>
+        <glob pattern="${URI}://*"/>
     </mime-type>
 </mime-info>
 EOF
@@ -499,51 +573,35 @@ EOF
 }
 
 create_config() {
+	[[ -f $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf ]] && echo -e "$WARN_LABEL Existing config file found. Skipping..."
 	echo -e "$INFO_LABEL Creating configuration file..."
 	mkdir -p "$DEFAULT_CONFIG_LOCATION" 2>/dev/null
-cat > "$DEFAULT_CONFIG_LOCATION/bm2dx.conf" <<EOF
+cat > "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf" <<EOF
 # Infinitas for Linux configuration file
 # See https://github.com/mizztgc/infinitas-for-linux/wiki/Configuration-File for explanations of
 # each configuration option
 
 EOF
-	echo "prefix=\"${installLocation}\"" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+	echo "prefix=\"${installLocation}\"" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 	if [[ $customWineDir ]]; then
-		echo "custom_wine=\"${customWineDir}\"" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+		echo "custom_wine=\"${customWineDir}\"" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 	else
-		echo "custom_wine=" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
-	fi
-	
-	if [[ $useFlatpak ]]; then
-		echo "use_flatpak=true" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
-	else
-		echo "#use_flatpak=false" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+		echo "custom_wine=" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 	fi
 
-	echo "use_winevd=true" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
-	echo "use_gamemode=false" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
-	echo -e "#g amescope doesn't play nicely with wine, so it's disabled.\n#use_gamescope=false" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
-	echo "#pa_latency=40" >> "$DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+	echo "use_winevd=true" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+	echo "use_gamemode=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+	echo -e "# gamescope doesn't play nicely with wine, so it's disabled.\n#use_gamescope=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+	echo "#pa_latency=40" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 
-	echo -e "$INFO_LABEL Wrote configuration file to $DEFAULT_CONFIG_LOCATION/bm2dx.conf"
+	echo -e "$INFO_LABEL Wrote configuration file to $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 }
 
 create_keys() {
 	echo -e "$INFO_LABEL Creating registry keys..."
-	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\\' /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir' /t 'REG_SZ' /d 'C:\Games\\beatmania IIDX INFINITAS\Resource\\' /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add "HKLM\\SOFTWARE\\KONAMI\\${DIR_TITLE}" /v 'InstallDir' /t 'REG_SZ' /d "C:\Games\\${DIR_TITLE}\\" /f '/reg:64' 2>/dev/null
+	${WINE_NOEXPLORER} reg add "HKLM\\SOFTWARE\\KONAMI\\${DIR_TITLE}" /v 'ResourceDir' /t 'REG_SZ' /d "C:\Games\\${DIR_TITLE}\\Resource\\" /f '/reg:64' 2>/dev/null
 	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' 2>/dev/null
-# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'bm2dx.exe' /t 'REG_SZ' /d "1920x1080" /f '/reg:64' 2>/dev/null
-# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcompiler_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
-# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcompiler_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
-# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dcsx_43' /t 'REG_SZ' /d 'native' /f '/reg:64' 2>/dev/null
-# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'd3dx9_43' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
-# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xactengine3_7' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
-# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xapofx1_5' /t 'REG_SZ' /d 'native' /f '/reg:64' 2>/dev/null
-# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\DllOverrides' /v 'xaudio2_7' /t 'REG_SZ' /d 'builtin,native' /f '/reg:64' 2>/dev/null
-# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\Explorer' /v 'Desktop' /t 'REG_SZ' /d 'bm2dx.exe' /f '/reg:64' 2>/dev/null
-# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\X11 Driver' /v 'Decorated' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
-# 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\AppDefaults\bm2dx.exe\X11 Driver' /v 'Managed' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
 	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
 	# for experimental wayland driver
 	#${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Drivers' /v 'Graphics' /t 'REG_SZ' /d 'x11,wayland' /f '/reg:64' 2>/dev/null
@@ -559,20 +617,16 @@ set_vars() {
 	
 	# check if the install location exists or not
 	if [[ -e "${installLocation}" ]]; then
-		if [[ $InstallCmd -eq 1 ]]; then
-			[[ -f "${installLocation}/system.reg" || -f "${installLocation}/user.reg" ]] && echo -e "$WARN_LABEL Installing beatmania IIDX INFINITAS to an existing Wineprefix is not recommended!"
-		fi
-
-		if [[ -n "$(find -L ${installLocation}/dosdevices/c:/Games -type f -name 'bm2dx_launcher.exe' 2>/dev/null)" ]]; then
+		if [[ -f "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}.exe" ]]; then
 			if [[ $InstallCmd -eq 1 ]]; then
-				echo -e "$ERROR_LABEL The installer has detected existing files for the beatmania IIDX INFINITAS launcher. Installation cannot continue."
+				echo -e "$ERROR_LABEL The installer has detected existing files for the ${GAME_TITLE} launcher. Installation cannot continue."
 				exit 4
 			fi
 
-			[[ $useVerbose ]] && echo -e "$INFO_LABEL Found beatmania IIDX INFINITAS in specified prefix"
+			[[ $useVerbose ]] && echo -e "$INFO_LABEL Found ${GAME_TITLE} in specified prefix"
 		else
 			if [[ $InstallCmd -ne 1 ]]; then
-				echo -e "$ERROR_LABEL beatmania IIDX INFINITAS is not installed to this prefix"
+				echo -e "$ERROR_LABEL ${GAME_TITLE} is not installed to this prefix"
 				exit 4
 			fi
 		fi
@@ -586,48 +640,7 @@ set_vars() {
 		fi
 	fi
 	
-	if [[ $useFlatpak ]]; then
-		# flatpak warning
-		[[ $useVerbose ]] && echo -e "$INFO_LABEL Attempting to use Flatpak build of Wine..."
-		case "$TERM" in
-			dumb)
-				[[ $(which notify-send 2>/dev/null) ]] && notify-send "Flatpak Warning" -i 'dialog-warning' -a "$(basename -- $0)" "It is NOT RECOMMENDED to use the Flatpak build of Wine with this script! If possible, please use a native Wine build from your distribution or a custom-built one."
-				echo "It is NOT RECOMMENDED to use the Flatpak build of Wine with this script! If possible, please use a native Wine build from your distribution or a custom-built one."
-				;;
-			*)
-				echo -e "$WARN_LABEL It is NOT RECOMMENDED to use the Flatpak build of Wine with this script! If possible, please use a native Wine build from your distribution or a custom-built one."
-				;;
-		esac
-		[[ -z $(which flatpak 2>/dev/null) ]] && echo -e "$ERROR_LABEL Flatpak was not found on your system." && exit 2
-		declare -ag EXTRA_FLATPAK_ARGUMENTS
-		
-		if [[ -n $(flatpak list --user --app --columns=application | grep -w 'org.winehq.Wine') ]]; then
-			[[ $useVerbose ]] && echo -e "$INFO_LABEL Found Wine (Flatpak) in user profile"
-			EXTRA_FLATPAK_ARGUMENTS+="--user"
-		elif [[ -n $(flatpak list --system --app --columns=application | grep -w 'org.winehq.Wine') ]]; then
-			[[ $useVerbose ]] && echo -e "$INFO_LABEL Found Wine (Flatpak) in system profile"
-			EXTRA_FLATPAK_ARGUMENTS+="--system"
-		else
-			echo -e "$ERROR_LABEL Wine (Flatpak) has not been installed to your system. Assuming you have the flathub repository added, you can install Wine by running the following comamnd:\n  \033[1mflatpak install org.winehq.Wine\033[0m"
-			exit 2
-		fi
-
-		[[ ! $useVerbose ]] && case "$TERM" in
-			dumb)
-				echo "Found Wine (Flatpak)"
-				;;
-			*)
-				echo -e "$INFO_LABEL Found Wine (Flatpak)"
-				;;
-		esac
-		EXTRA_FLATPAK_ARGUMENTS+=" --env=WINEPREFIX=${installLocation} --env=WINEDEBUG='fixme-all' --env=WINEDLLOVERRIDES='mscoree' --filesystem=${installLocation}:create --filesystem=$TEMP_DIRECTORY"
-		[[ $InstallCmd -eq 0 ]] && EXTRA_FLATPAK_ARGUMENTS+=" --env=DXVK_FRAME_RATE=120"
-		WINE="flatpak run ${EXTRA_FLATPAK_ARGUMENTS} --command=wine64 org.winehq.Wine"
-		WINE_NOEXPLORER="flatpak run ${EXTRA_FLATPAK_ARGUMENTS} --env=WINEDLLOVERRIDES='explorer.exe=d' --command=wine64 org.winehq.Wine" # necessary for not creating an explorer process
-		[[ $InstallCmd -ne 0 ]] && WINEBOOT="flatpak run ${EXTRA_FLATPAK_ARGUMENTS} --command=wineboot org.winehq.Wine"
-		WINEPATH="flatpak run ${EXTRA_FLATPAK_ARGUMENTS} --env=WINEDLLOVERRIDES='explorer.exe=d;services.exe=d' --command=winepath org.winehq.Wine"
-		WINESERVER="flatpak run ${EXTRA_FLATPAK_ARGUMENTS} --command=wineserver org.winehq.Wine"
-	elif [[ $customWineDir ]]; then	# use custom wine build if specified
+	if [[ $customWineDir ]]; then	# use custom wine build if specified
 		[[ -n $customWineDir ]] && [[ $customWineDir == '/usr' || $customWineDir == '/' ]] && echo -e "$ERROR_LABEL Are you serious?" && exit 100
 	
 		[[ $useVerbose ]] && echo -e "$INFO_LABEL Attempting to use custom Wine build at $customWineDir..."
@@ -693,8 +706,8 @@ set_vars() {
 	
 
 	# set variables as read only
-	declare -gr instdir='C:\Games\beatmania IIDX INFINITAS'
-	declare -gr resdir='C:\Games\beatmania IIDX INFINITAS\Resource'
+	declare -gr instdir="C:\\Games\\${DIR_TITLE}\\"
+	declare -gr resdir="C:\\Games\\${DIR_TITLE}\\Resource"
 	declare -r useFlatpak 2>/dev/null
 	declare -r customWineDir 2>/dev/null
 	declare -r installLocation 2>/dev/null
@@ -742,39 +755,38 @@ parse_flags() {
 		else
 			case "$cArg" in
 				help)
-cat <<'EOM'
+cat <<EOM
 
 Infinitas for Linux install script by Mizzt (mizztgc)
 https://github.com/mizztgc/infinitas-for-linux
 
 General commands/arguments:
   help: Shows this message
-  launch: Launch the game
   
 Install commands:
-  install: Install beatmania IIDX INFINITAS
-  uninstall: Uninstall beatmania IIDX INFINITAS
+  install: Install ${GAME_TITLE}
+  uninstall: Uninstall ${GAME_TITLE}
 
 Install arguments:
   --flatpak: Use the Flatpak build of Wine over your system's native build (NOT RECOMMENDED)
-  --prefix: Set the location of the prefix (default: ~/.local/share/infinitas)
+  --prefix: Set the location of the prefix (default: ~/.local/share/konaste)
     ex: --prefix=/path/to/prefix
   --winebuild: Use a custom build of Wine for installation (cannot be used with --flatpak)
     ex: --winebuild=/path/to/winebuild_dir
   --verbose: Output more information during installation
 
 Post-install commands:
-  create-icons: Generates the icons for beatmania IIDX INFINITAS (requires imagemagick)
+  create-icons: Generates the icons for ${GAME_TITLE} (requires imagemagick)
   create-launcher: Generates a new .desktop launcher for opening the game
   fix-registry: Fixes the registry keys in the prefix to help the game run
 
 EOM
 						exit 0
 					;;
-				bm2dxinf://*)
+				${URI}://*)
 					[[ $InstallCmd ]] && echo -e "$ERROR_LABEL You can only specify one command" && exit 9
 					declare -gr InstallCmd=0
-					[[ "${cArg:0:11}" == 'bm2dxinf://' ]] && declare -gr LAUNCH_TOKEN="$1"
+					declare -gr LAUNCH_TOKEN="$1"
 					;;	
 				'install')
 					[[ $InstallCmd ]] && echo -e "$ERROR_LABEL You can only specify one command" && exit 9
@@ -829,7 +841,7 @@ case $InstallCmd in
 		# block gamescope
 		if [[ $GAMESCOPE_WAYLAND_DISPLAY || $XDG_CURRENT_DESKTOP == 'gamescope' ]]; then
 			[[ $TERM != 'dumb' ]] && echo -e "\n\n\t\033[1;91m!!! DO NOT RUN THIS SCRIPT DIRECTLY THROUGH GAMESCOPE !!!\033[0m\n\n"
-			[[ $TERM == 'dumb' ]] && show_error_box "You should NOT be running this script directly through a gamescope session.\nPlease enable gamescope support within your configuration file located at $DEFAULT_CONFIG_LOCATION/bm2dx.conf" 134
+			[[ $TERM == 'dumb' ]] && show_error_box "You should NOT be running this script directly through a gamescope session.\nPlease enable gamescope support within your configuration file located at $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf" 134
 			killall -ABRT gamescope-wl
 			exit 134
 		fi
@@ -846,41 +858,44 @@ case $InstallCmd in
 		# make sure the game is installed
 		case $(is_game_installed; echo $?) in
 			0)
-				echo "Found beatmania IIDX INFINITAS Launcher"
+				echo "Found ${GAME_TITLE} Launcher"
 				;;
 			1|2|3)
-				show_error_box "beatmania IIDX INFINITAS is not installed.\nRun '$(basename -- $0) install' in a terminal to install the game." 1
+				show_error_box "${GAME_TITLE} is not installed.\nRun '$(basename -- $0) install' in a terminal to install the game." 1
 				;;
 			4)
-				show_error_box "Couldn't find beatmania IIDX INFINITAS launcher executable."
+				show_error_box "Couldn't find ${GAME_TITLE} launcher executable."
 				;;
 		esac
 
 		# open the website if no launch token is given
 		[[ ! "$LAUNCH_TOKEN" ]] && show_error_box "No login string provided" 1
-		[[ "${#LAUNCH_TOKEN}" -ne 89 && "${#LAUNCH_TOKEN}" -ne 91 ]] && show_error_box "Login string provided is an invalid length" 3
-		[[ "${LAUNCH_TOKEN:85}" != 'rel=' && "${LAUNCH_TOKEN:85}" != 'trial=' ]] && show_error_box "Login string contains an unknown mode: ${LAUNCH_TOKEN:85:-1}" 4
+		if [[ $URI == 'bm2dxinf' ]]; then
+			[[ "${#LAUNCH_TOKEN}" -ne 89 && "${#LAUNCH_TOKEN}" -ne 91 ]] && show_error_box "Login string provided is an invalid length" 3
+			[[ "${LAUNCH_TOKEN:85}" != 'rel=' && "${LAUNCH_TOKEN:85}" != 'trial=' ]] && show_error_box "Login string contains an unknown mode: ${LAUNCH_TOKEN:85:-1}" 4
+		fi
 
 		# get launch parameters going
 		declare -a prelaunchParam
 		declare -a wineParam
 
-
 		if [[ -n $use_gamemode && $use_gamemode == 'true' ]]; then
 			if [[ -n $(which gamemoderun 2>/dev/null) ]]; then
-				prelaunchParam+="$(which gamemoderun)"
+				prelaunchParam+="$(which gamemoderun) "
 			fi
 		fi
 
 		if [[ -n $use_gamescope && $use_gamescope == 'true' ]]; then
 			if [[ -n $(which gamescope 2>/dev/null) ]]; then
-				notify-send "Gamescope Warning" -a "beatmania IIDX INFINITAS" -i "dialog-warning" -t 5000 "Gamescope support is currently experimental and has a lot of issues with Wine. You may also need to manually kill this process when you are done playing."
-				prelaunchParam+=" $(which gamescope) -W 1920 -H 1080 -w 1920 -h 1080 -r 120 --framerate-limit 120 -f --"
+				notify-send "Gamescope Warning" -a "${GAME_TITLE}" -i "dialog-warning" -t 5000 "Gamescope support is currently experimental and has a lot of issues with Wine. You may also need to manually kill this process when you are done playing."
+				prelaunchParam+="$(which gamescope) -W 1920 -H 1080 -w 1920 -h 1080 -r 120 --framerate-limit 120 -f -- "
 				sleep 2	# give the user more time to read the warning
 			else
-				notify-send "Gamescope not found!" -a "beatmania IIDX INFINITAS" -i "dialog-warning" "Gamescope support has been enabled in your configuration file, but gamescope was not found on your system."
+				notify-send "Gamescope not found!" -a "${GAME_TITLE}" -i "dialog-warning" "Gamescope support has been enabled in your configuration file, but gamescope was not found on your system."
 			fi
 		fi
+
+		prelaunchParam+="env LANG=ja_JP.UTF-8"
 
 		if [[ $useFlatpak ]]; then
 			show_error_box "Flatpak is disabled because it doesn't want to be normal.\nPlease play this game through a native build of Wine." 99
@@ -893,9 +908,11 @@ case $InstallCmd in
 		#	1. set use_winevd in your config file to 'true'
 		#	2. manually set your refresh rate to 60Hz (or 120Hz if supported)
 		if [[ "$XDG_SESSION_TYPE" == 'wayland' ]]; then
-			notify-send "Wayland Warning" -a "beatmania IIDX INFINITAS" -i "dialog-warning" -t 10000 "It is not recommended to play beatmania IIDX INFINITAS in a Wayland session. Please either play in an Xorg session or set 'use_winevd' in your configuration file to 'true'."
-			#declare -x DISPLAY=
-			sleep 2
+			if [[ ! $use_winevd ]]; then
+				notify-send "Wayland Warning" -a "${GAME_TITLE}" -i "dialog-warning" -t 10000 "It is not recommended to play ${GAME_TITLE} in a Wayland session. Please either play in an Xorg session or set 'use_winevd' in your configuration file to 'true'."
+				#declare -x DISPLAY=
+				sleep 2
+			fi
 		fi
 
 		# "well why not just force the refresh rate to 120Hz through the registry?"
@@ -912,7 +929,7 @@ case $InstallCmd in
 		pw-loopback -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=infinitas node.description=infinitas audio.rate=44100' &
 		export PULSE_SINK='infinitas' # to ensure the wine process defaults to using this loopback instead of your system's defaults.
 		[[ -n $pa_latency ]] && export PULSE_LATENCY_MSEC=$pa_latency	# export pulseaudio latency variable if found in config
-		"${prelaunchParam}" env LANG=ja_JP.UTF-8 "${WINE}" ${wineParams} 'C:\Games\beatmania IIDX INFINITAS\launcher\modules\bm2dx_launcher.exe' "$LAUNCH_TOKEN" > /dev/null	# and now we launch the game
+		${prelaunchParam} "${WINE}" ${wineParams} "C:\\Games\\${DIR_TITLE}\\launcher\\modules\\${LAUNCHER_NAME}.exe" "$LAUNCH_TOKEN" > /dev/null	# and now we launch the game
 		"${WINESERVER}" -w 	# wait for wineserver to terminate
 		sleep 1
 		kill -15 $(jobs -p) 2>/dev/null	# kill all processes
@@ -940,30 +957,31 @@ case $InstallCmd in
 		fi
 
 		# download game files
-		echo -e "$INFO_LABEL Downloading installer for beatmania IIDX INFINITAS..."
-		if [[ -f "$TEMP_DIRECTORY/$(basename -- $INFINITAS_LINK)" ]]; then
-			echo -e "$INFO_LABEL" "Skipped: Found beatmania IIDX INFINITAS installer..."
+		echo -e "$INFO_LABEL Downloading installer for ${GAME_TITLE}..."
+		if [[ -f "$TEMP_DIRECTORY/$(basename -- $INSTALLER_LINK)" ]]; then
+			echo -e "$INFO_LABEL" "Skipped: Found ${GAME_TITLE} installer..."
 		else
-			wget -q "$INFINITAS_LINK"
+			wget -q "$INSTALLER_LINK"
 			if [[ $? -ne 0 ]]; then
-				echo -e "$ERROR_LABEL Failed to download beatmania IIDX INFINITAS launcher!"
+				echo -e "$ERROR_LABEL Failed to download ${GAME_TITLE} launcher!"
 				exit 2
 			fi
 		fi
 
 		# extract gamefiles
 		echo -e "$INFO_LABEL Extracting files from installer..."
-		msiextract "$TEMP_DIRECTORY/$(basename -- $INFINITAS_LINK)" > /dev/null
-		mkdir "$TEMP_DIRECTORY/Games/beatmania IIDX INFINITAS/Resource" 2>/dev/null
+		msiextract "$TEMP_DIRECTORY/$(basename -- $INSTALLER_LINK)" > /dev/null
+		mkdir "$TEMP_DIRECTORY/Games/${DIR_TITLE}/Resource"
 		
-		# delete unnecessary folders
-		rm -rf "$TEMP_DIRECTORY/Win" 2>/dev/null
+		[[ -d $TEMP_DIRECTORY/System64 ]] && mv $TEMP_DIRECTORY/System64/* "${installLocation}/dosdevices/c:/windows/system32/"
+		[[ -d $TEMP_DIRECTORY/Win ]] && mv $TEMP_DIRECTORY/Win/System64/* "${installLocation}/dosdevices/c:/windows/system32/"
 		echo -e "$INFO_LABEL Installing DirectX 9.0c Redist..."
-		"${WINE}" "$TEMP_DIRECTORY/Games/beatmania IIDX INFINITAS/DirectX 9.0c Redist/DXSETUP.exe" '/silent' 2>dev/null
+		"${WINE}" "$TEMP_DIRECTORY/Games/${DIR_TITLE}/DirectX 9.0c Redist/DXSETUP.exe" '/silent'
 		if [[ $? -ne 0 ]]; then
 			echo -e "$ERROR_LABEL Failed to install DirectX 9.0c Redist!"
 		fi
-		rm -rf "$TEMP_DIRECTORY/Games/beatmania IIDX INFINITAS/DirectX 9.0c Redist" 2>/dev/null
+		rm -rf "$TEMP_DIRECTORY/Games/${DIR_TITLE}/DirectX 9.0c Redist"
+		rm -rf "$TEMP_DIRECTORY/System64" "$TEMP_DIRECTORY/Win"
 		
 		# download vcr2010
 		echo -e "$INFO_LABEL Downloading Microsoft Visual C++ Redist 2010..."
@@ -979,7 +997,7 @@ case $InstallCmd in
 		
 		# install vcr2010
 		echo -e "$INFO_LABEL Installing Microsoft Visual C++ Redist 2010..."
-		"${WINE}" 'vcredist_x64.exe' '/quiet' 2>dev/null
+		"${WINE}" 'vcredist_x64.exe' '/quiet'
 		if [[ $? -ne 0 ]]; then
 			echo -e "$ERROR_LABEL Failed to install Visual C++ Redist 2010!"
 		fi
@@ -989,7 +1007,7 @@ case $InstallCmd in
 		if [[ -f "$TEMP_DIRECTORY/$(basename -- $DXVK_LINK)" ]]; then
 			echo -e "$INFO_LABEL" "Skipped: Found DXVK archive..."
 		else
-			wget -q "$DXVK_LINK" 2>/dev/null
+			wget -q "$DXVK_LINK"
 			if [[ $? -ne 0 ]]; then
 				echo -e "$ERROR_LABEL Failed to download DXVK archive!"
 				exit 2
@@ -998,11 +1016,11 @@ case $InstallCmd in
 		
 		# extract dxvk archive
 		echo -e "$INFO_LABEL Extracting DXVK archive..."
-		tar -zxf $(basename -- $DXVK_LINK) 2>/dev/null
+		tar -zxf $(basename -- $DXVK_LINK)
 		echo -e "$INFO_LABEL Moving .dll files from archive..."
 		cp -Lf $TEMP_DIRECTORY/dxvk*/x64/d3d9.dll "${installLocation}/dosdevices/c:/windows/system32/"
 		cp -Lf $TEMP_DIRECTORY/dxvk*/x32/d3d9.dll "${installLocation}/dosdevices/c:/windows/syswow64/"
-		${WINE_NOEXPLORER} reg add 'HKCU\Software\Wine\DllOverrides' /v 'd3d9' /d 'native,builtin' /f '/reg:64' 2>dev/null
+		${WINE_NOEXPLORER} reg add 'HKCU\Software\Wine\DllOverrides' /v 'd3d9' /d 'native,builtin' /f '/reg:64'
 
 		create_icons
 		create_launcher
@@ -1014,7 +1032,7 @@ case $InstallCmd in
 		rm -rf "$TEMP_DIRECTORY"
 		$WINESERVER -k
 		
-		echo -e "\033[1;92mbeatmania IIDX INFINITAS has been successfully installed!\033[0m"
+		echo -e "\033[1;92m${GAME_TITLE} has been successfully installed!\033[0m"
 		exit
 		;;
 
