@@ -18,7 +18,7 @@ It's also worth pointing out I'm still pretty new at this whole GitHub thing, so
 
 ## WHAT DOES THIS SCRIPT DO?
 
-This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a PC rhythm game based on their already established arcade franchise of the same name, using Wine.
+This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a PC rhythm game based on their already established arcade franchise of the same name, using Wine. It can also be used as a base for launching other KONAMI Amusement Station Cloud (Konaste) games as well, such as SOUND VOLTEX EXCEED GEAR.
 
 ## DEPENDENCIES:
 
