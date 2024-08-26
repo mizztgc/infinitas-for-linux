@@ -176,6 +176,18 @@ source_config() {
 	[[ -n $prefix ]] && declare -g installLocation="${prefix}"
 	[[ -n $custom_wine ]] && declare -g customWineDir="${custom_wine}"
 	#[[ -n $use_flatpak && $use_flatpak == 'true' ]] && declare -g useFlatpak="$use_flatpak"
+
+	[[ $env_vars && ${#env_vars[@]} -gt 0 ]] && for var in ${env_vars[@]}; do
+		case "${var##*=}" in
+			WINEPREFIX|PULSE_LATENCY_MSEC|PULSE_SINK)
+				echo -e "$WARN_LABEL Environment variable ${var##*=} cannot be set."
+				;;
+			*)
+				declare -x $var
+				;;
+		esac
+
+	done
 	return 0
 }
 
@@ -593,6 +605,7 @@ EOF
 	echo "use_gamemode=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 	echo -e "# gamescope doesn't play nicely with wine, so it's disabled.\n#use_gamescope=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 	echo "#pa_latency=40" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+	echo -e "# for any extra environment variables you want to use, add them here\nenv_vars=()" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 
 	echo -e "$INFO_LABEL Wrote configuration file to $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 }
@@ -1033,6 +1046,7 @@ case $InstallCmd in
 		$WINESERVER -k
 		
 		echo -e "\033[1;92m${GAME_TITLE} has been successfully installed!\033[0m"
+		echo -e "\033[1mRemember to set your audio mode to WASAPI (Shared). otherwise ${GAME_TITLE} will NOT start!\033[0m"
 		exit
 		;;
 
