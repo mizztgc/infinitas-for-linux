@@ -158,7 +158,7 @@ is_game_installed() {
 	
 	[[ ! -d "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}" ]] && return 3
 	[[ ! -d "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}/Resource" ]] && return 3
-	[[ ! -f "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}" ]] && return 4
+	[[ ! -f "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}.exe" ]] && return 4
 
 	return 0
 }
