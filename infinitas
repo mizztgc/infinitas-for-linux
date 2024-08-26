@@ -14,6 +14,9 @@
 #
 # Play at your own risk.
 
+DEFAULT_PREFIX_LOCATION="$HOME/.local/share/konaste"
+DEFAULT_PREFIX_LOCATION_FLATPAK=( "$HOME/.var/app/org.winehq.Wine/data/konaste" "/var/data/konaste" )
+DEFAULT_CONFIG_LOCATION="$HOME/.config/konaste"
 ##############################################################################################################################
 # for all you linux rhythm nerds out there, if you want to use this script to install other konaste games out there,
 # just uncomment the lines you want here. by default, the lines for beatmania IIDX INFINITAS will be uncommented, because
@@ -88,983 +91,470 @@ URI='bm2dxinf'
 #URI='konaste.bomber-girl'
 ##############################################################################################################################
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-DEFAULT_INSTALL_LOCATION="$HOME/.local/share/konaste"
-DEFAULT_CONFIG_LOCATION="$HOME/.config/konaste"
-TEMP_DIRECTORY="/tmp/konmai_pls"
-
-[[ "$UID" -eq 0 ]] && echo -e "$ERROR_LABEL This script is not to be ran as the root user." && exit 127
-
-# default values and download links
-INFO_LABEL="\033[1m-> INFO:\033[0m"
-ERROR_LABEL="\033[1;91m-> ERROR:\033[0m"
-WARN_LABEL="\033[1;93m-> WARNING:\033[0m"
-
-DXVK_LINK="https://github.com/doitsujin/dxvk/releases/download/v2.4/dxvk-2.4.tar.gz"
-VCR2010_LINK="https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe"
-
-echo -e "${WARN_LABEL} This script is still under construction. Some changes MAY break script functionality."
-
-if [[ "$XDG_SESSION_TYPE" == 'wayland' ]]; then
-	echo -e "$WARN_LABEL Avoid playing in a Wayland session."
-fi
-
-ynPrompt() {
-	while true; do
-		pro="$1 ["
-		case $2 in
-			0)
-				pro+="Y/n] "
-				;;
-			1)
-				pro+="N/y] "
-				;;
-			*)
-				pro+="y/n] "
-				;;
-		esac
-
-		read -rp "$(printf "\033[1m$pro\033[0m")" choice
-		if [[ -z "$choice" ]]; then
-			case "$2" in
-				0)
-					choice='y'
-					;;
-				1)
-					choice='n'
-					;;
-			esac
-		fi
-
-		case $choice in
-			[Yy]|[Yy][Ee][Ss])
-				return 0
-				;;
-			[Nn]|[Nn][Oo])
-				return 1
-				;;
-			*)
-				echo -e "$ERROR_LABEL Invalid response."
-				;;
-		esac
-	done
-}
-
-is_game_installed() {
-	# these slow down the execution of the script on flatpak
-	#[[ ! $(${WINE_NOEXPLORER} reg query '/reg:64' 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS') ]] && return 1
-	#[[ ! $(${WINE_NOEXPLORER} reg query '/reg:64' 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'InstallDir') ]] && return 2
-	#[[ ! $("${WINE_NOEXPLORER}" reg query '/reg:64' 'HKLM\SOFTWARE\KONAMI\beatmania IIDX INFINITAS' /v 'ResourceDir') ]] && return 2
-	
-	[[ ! -d "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}" ]] && return 3
-	[[ ! -d "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}/Resource" ]] && return 3
-	[[ ! -f "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}.exe" ]] && return 4
-
-	return 0
-}
-
-# source config file if it exists
-source_config() {
-	if [[ ! -f "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf" ]]; then
-		[[ $useVerbose ]] && echo -e "$ERROR_LABEL Couldn't find $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-		return 1
-	fi
-	
-	[[ $useVerbose ]] && echo -e "$INFO_LABEL Found configuration file at $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	source "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-
-	[[ -n $prefix ]] && declare -g installLocation="${prefix}"
-	[[ -n $custom_wine ]] && declare -g customWineDir="${custom_wine}"
-	#[[ -n $use_flatpak && $use_flatpak == 'true' ]] && declare -g useFlatpak="$use_flatpak"
-
-	[[ $env_vars && ${#env_vars[@]} -gt 0 ]] && for var in ${env_vars[@]}; do
-		case "${var##*=}" in
-			WINEPREFIX|PULSE_LATENCY_MSEC|PULSE_SINK)
-				echo -e "$WARN_LABEL Environment variable ${var##*=} cannot be set."
-				;;
-			*)
-				declare -x $var
-				;;
-		esac
-
-	done
-	return 0
-}
-
-dependency_check() {
-	declare -a missingDeps
-	declare -a missingOptDeps
-
-	# DISCLAIMER: The missing dependency names you see here are from the application's associated package
-	# names on Arch Linux. Check your distro's package manager to find the relevant packages.
-	# TODO: Add a way to automatically install the packages
-	[[ ! $useFlatpak ]] && [[ -z $(which wine 2>/dev/null) ]] && missingDeps+='wine '
-	[[ -z $(which xdg-open 2>/dev/null) ]] && missingDeps+='xdg-utils '
-	[[ -z $(which tar 2>/dev/null) ]] && missingDeps+='tar '
-	[[ -z $(which wget 2>/dev/null) ]] && missingDeps+='wget '
-	[[ -z $(which kdialog 2>/dev/null) ]] && missingDeps+='kdialog '
-	[[ -z $(which msiextract 2>/dev/null) ]] && missingDeps+='msitools '
-	[[ -z $(which notify-send 2>/dev/null) ]] && missingDeps+='libnotify '
-	[[ -z $(which pipewire 2>/dev/null) ]] && missingDeps+='pipewire '
-	[[ -z $(which pipewire-pulse 2>/dev/null) ]] && missingDeps+='pipewire-pulse '
-	[[ -z $(which pactl 2>/dev/null) ]] && missingDeps+='libpulse '
-	[[ -z $(which pw-loopback 2>/dev/null) ]] && missingDeps+='pipewire-audio '
-	[[ -z $(which magick 2>/dev/null) ]] && missingOptDeps+='imagemagick '
-	[[ -z $(which gamemoderun 2>/dev/null) ]] && missingOptDeps+='gamemode '
-	[[ -z $(which gamescope 2>/dev/null) ]] && missingOptDeps+='gamescope '
-
-	if [[ ${#missingDeps[@]} -gt 0 || ${#missingOptDeps[@]} -gt 0 ]]; then
-		if [[ ${#missingDeps[@]} -gt 0 ]]; then
-			echo -e "$ERROR_LABEL The following REQUIRED dependencies were not found on your system:"
-			echo -e "\033[91m${missingDeps}\033[0m"
-		elif [[ ${#missingDeps[@]} -eq 0 && ${#missingOptDeps[@]} -gt 0 ]]; then
-			echo -e "$WARN_LABEL The following OPTIONAL dependencies were not found on your system:"
-		fi
-
-		echo -e "\033[93m${missingOptDeps}\033[0m"
-
-		[[ ${#missingDeps[@]} -gt 0 ]] && exit 4
-		echo -e "$INFO_LABEL All required dependencies satisfied."
-	else
-		echo -e "$INFO_LABEL All dependencies satisfied."
-	fi
-	
-	return 0
-}
-
-# disclaimer
-read -rd '' disclaimer <<EOM
-\n\033[1;91mWARNING:\033[0;1m READ BEFORE CONTINUING:\033[0m\n\n
-
-This script is in no way affiliated with, endorsed, nor supported by KONAMI. In order to access the full game outside\n
-of trial mode, you must be subscribed to the ${GAME_TITLE} Basic Course. This script will NOT allow you to\n
-gain access to things you aren't paying for, nor will the script developer assist you with such actions.\n\n
-
-Like most online games today, getting banned for playing the game on GNU/Linux (outside of what the developers\n
-intended) is a possibility. The script developer is not to be held responsible, should you receive any bans from use of\n
-this script.\n\n
-
-\033[3mPlay at your own risk\033[0m.\n\n
-EOM
-
-create_game_config() {
-	return 0	# don't wanna deal with this rn
-	# very experimental here
-	echo -e "$INFO_LABEL Creating beatmania IIDX INFINITAS settings file..."
-	configDir="$(${WINEPATH} -u "$resdir\\config")"
-	[[ ! -e "$configDir" ]] && mkdir -p "$configDir"
-cat > "$configDir/1000_cf.xml" <<'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<SettingDatas xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <Parameters>
-    <KeyValuePair>
-      <Key>
-        <string>DisplaySettings</string>
-      </Key>
-      <Value>
-        <string>0</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>AudioPlaySettings</string>
-      </Key>
-      <Value>
-        <string>1</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>FPSSettings</string>
-      </Key>
-      <Value>
-        <string>0</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_1</string>
-      </Key>
-      <Value>
-        <string>256</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_2</string>
-      </Key>
-      <Value>
-        <string>257</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_3</string>
-      </Key>
-      <Value>
-        <string>258</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_4</string>
-      </Key>
-      <Value>
-        <string>259</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_5</string>
-      </Key>
-      <Value>
-        <string>260</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_6</string>
-      </Key>
-      <Value>
-        <string>261</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_7</string>
-      </Key>
-      <Value>
-        <string>262</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_CW</string>
-      </Key>
-      <Value>
-        <string>263</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_CCW</string>
-      </Key>
-      <Value>
-        <string>264</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_E1</string>
-      </Key>
-      <Value>
-        <string>266</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_E2</string>
-      </Key>
-      <Value>
-        <string>265</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_E3</string>
-      </Key>
-      <Value>
-        <string>267</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig1P_E4</string>
-      </Key>
-      <Value>
-        <string>268</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_1</string>
-      </Key>
-      <Value>
-        <string>256</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_2</string>
-      </Key>
-      <Value>
-        <string>257</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_3</string>
-      </Key>
-      <Value>
-        <string>258</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_4</string>
-      </Key>
-      <Value>
-        <string>259</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_5</string>
-      </Key>
-      <Value>
-        <string>260</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_6</string>
-      </Key>
-      <Value>
-        <string>261</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_7</string>
-      </Key>
-      <Value>
-        <string>262</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_CW</string>
-      </Key>
-      <Value>
-        <string>263</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_CCW</string>
-      </Key>
-      <Value>
-        <string>264</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_E1</string>
-      </Key>
-      <Value>
-        <string>265</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_E2</string>
-      </Key>
-      <Value>
-        <string>266</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_E3</string>
-      </Key>
-      <Value>
-        <string>267</string>
-      </Value>
-    </KeyValuePair>
-    <KeyValuePair>
-      <Key>
-        <string>KeyConfig2P_E4</string>
-      </Key>
-      <Value>
-        <string>268</string>
-      </Value>
-    </KeyValuePair>
-  </Parameters>
-</SettingDatas>
-EOF
-	cp "$configDir/1000_cf.xml" "$configDir/1001_cf.xml"
-	return 0
-}
-
-create_icons() {
-	[[ -z $(which magick 2>/dev/null) ]] && echo -e "$WARN_LABEL imagemagick was not found on your system. Icons will not be created" && return 1
-	[[ $UID -ne 0 ]] &&	declare -I iconFolder="$HOME/.local/share/icons/hicolor"
-	[[ $UID -eq 0 ]] &&	declare -I iconFolder="/usr/share/icons/hicolor"
-	echo -e "$INFO_LABEL Creating icons..."
-	mkdir tmpIconDir
-	cd tmpIconDir
-	
-	icon_location="$(find $TEMP_DIRECTORY/Games -type f -name "*.ico")"
-	magick "$icon_location" icon.png
-	if [[ $? -ne 0 ]]; then
-		echo -e "$ERROR_LABEL Failed to create icons"
-		return 1
-	fi
-	
-	for index in {0..4}; do
-		dimens=$(file icon-${index}.png | grep -Eo "[[:digit:]]+ *x *[[:digit:]]+")
-		dimens="${dimens% x*}"
-		dest="$iconFolder/${dimens}x${dimens}"
-		[[ ! -e "$dest" ]] && mkdir -p "$dest"
-		[[ ! -e "$dest/apps" ]] && mkdir -p "$dest/apps"
-		[[ ! -e "$dest/mimetypes" ]] && mkdir -p "$dest/mimetypes"
-		cp -f icon-${index}.png "$dest/apps/${SIMPLE_NAME}.png" 2>/dev/null
-		cp -f icon-${index}.png "$dest/mimetypes/x-scheme-handler-${URI}.png" 2>/dev/null
-	done
-	unset iconLocation dimens dest index
-	cd ..
-	rm -rf tmpIconDir
-		
-	[[ $(which gtk-update-icon-cache 2>/dev/null) ]] && gtk-update-icon-cache
-	echo -e "$INFO_LABEL Created icons"
-	return 0
-}
-
-create_launcher() {
-	[[ $UID -ne 0 ]] &&	declare -I appsFolder="$HOME/.local/share/applications"
-	[[ $UID -ne 0 ]] &&	declare -I mimeFolder="$HOME/.local/share/mime"
-	[[ $UID -eq 0 ]] &&	declare -I appsFolder="/usr/share/applications"
-	[[ $UID -eq 0 ]] &&	declare -I mimeFolder="/usr/share/mime"
-	echo -e "$INFO_LABEL Creating launcher and mimetype..."
-cat > $appsFolder/"${SIMPLE_NAME}"-launcher.desktop <<EOF
-[Desktop Entry]
-MimeType=x-scheme-handler/${URI}
-Icon=${SIMPLE_NAME}
-Name=${GAME_TITLE} Launcher
-NoDisplay=true
-Type=Application
-EOF
-
-cat > $appsFolder/"${SIMPLE_NAME}".desktop <<EOF
-[Desktop Entry]
-Categories=Application;Game;
-Icon=infinitas
-Description=Play ${GAME_TITLE} on Linux
-Type=Application
-Exec=xdg-open ${LAUNCH_PAGE}
-EOF
-
-	case "$SIMPLE_NAME" in
-		bombergirl|nostalgia|gitadora|sdvx-exceedgear)
-			echo "Name[ja]=${GAME_TITLE}" >> $appsFolder/"${SIMPLE_NAME}".desktop
-			echo "Name=${DIR_TITLE}" >> $appsFolder/"${SIMPLE_NAME}".desktop
+log() {
+	[[ -z "$1" ]] && return 1
+	declare -Ia logOutput=()
+	[[ $TERM != 'dumb' ]] && case "$2" in
+		warn)
+			logOutput+=( "\033[1;93m->\033[39m WARNING:\033[0m" )
+			;;
+		err)
+			logOutput+=( "\033[1;91m->\033[39m ERROR:\033[0m" )
+			;;
+		ok)
+			logOutput+=( "\033[1;92m->\033[39m SUCCESS\033[0m" )
 			;;
 		*)
-			echo "Name=${GAME_TITLE}" >> $appsFolder/"${SIMPLE_NAME}".desktop
+			logOutput+=( "\033[1;96m->\033[39m INFO:\033[0m" )
+			;;
 	esac
-
-	[[ $UID -eq 0 ]] && echo "Exec=$(basename -- $0) %u" >> $appsFolder/"${SIMPLE_NAME}"-launcher.desktop
-	[[ $UID -ne 0 ]] && echo "Exec=$SCRIPT_DIR/$(basename -- $0) %u" >> $appsFolder/"${SIMPLE_NAME}"-launcher.desktop
-
-	[[ ! -e $mimeFolder/packages ]] && mkdir "$mimeFolder/packages" 2>/dev/null
-cat > "$mimeFolder/packages/x-scheme-handler-${URI}.xml" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
-    <mime-type type="x-scheme-handler/${URI}">
-        <comment>${GAME_TITLE}</comment>
-        <icon name="x-scheme-handler-${URI}"/>
-        <glob-deleteall/>
-        <glob pattern="${URI}://*"/>
-    </mime-type>
-</mime-info>
-EOF
-
-	update-desktop-database $appsFolder
-	update-mime-database $mimeFolder
+	logOutput+=( "${1}\033[0m" )
+	echo -e "${logOutput[@]}"
 	return 0
 }
 
-create_config() {
-	[[ -f $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf ]] && echo -e "$WARN_LABEL Existing config file found. Skipping..."
-	echo -e "$INFO_LABEL Creating configuration file..."
-	mkdir -p "$DEFAULT_CONFIG_LOCATION" 2>/dev/null
-cat > "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf" <<EOF
-# Infinitas for Linux configuration file
-# See https://github.com/mizztgc/infinitas-for-linux/wiki/Configuration-File for explanations of
-# each configuration option
-
-EOF
-	echo "prefix=\"${installLocation}\"" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	if [[ $customWineDir ]]; then
-		echo "custom_wine=\"${customWineDir}\"" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+locate_files() {
+	[[ ! -e "${prefixLocation}" ]] && return 1
+	[[ ! -f "${prefixLocation}/system.reg" ]] && return 2
+		
+	if [[ $useFlatpak ]]; then
+		instDir="$(${WINEPATH[@]}) -u "${INSTALL_DIR}" 2>/dev/null | sed 's,'"/var/data"','"$HOME/.var/app/org.winehq.Wine/data"',' 2>/dev/null)"
+		resdir="$(${WINEPATH[@]}) -u "${RESOURCE_DIR}" 2>/dev/null | sed 's,'"/var/data"','"$HOME/.var/app/org.winehq.Wine/data"',' 2>/dev/null)"
+		launchexe="$(${WINEPATH[@]}) -u "${LAUNCHER_EXECUTABLE}" 2>/dev/null | sed 's,'"/var/data"','"$HOME/.var/app/org.winehq.Wine/data"',' 2>/dev/null)"
 	else
-		echo "custom_wine=" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+		instDir="$(${WINEPATH[@]} -u "${INSTALL_DIR}" 2>/dev/null)"
+		resdir="$(${WINEPATH[@]} -u "${RESOURCE_DIR}" 2>/dev/null)"
+		launchexe="$(${WINEPATH[@]} -u "${LAUNCHER_EXECUTABLE}" 2>/dev/null)"
 	fi
 
-	echo "use_winevd=true" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	echo "use_gamemode=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	echo -e "# gamescope doesn't play nicely with wine, so it's disabled.\n#use_gamescope=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	echo "#pa_latency=40" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	echo -e "# for any extra environment variables you want to use, add them here\nenv_vars=()" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+	[[ ! -d "${instDir}" ]] && return 3
+	[[ ! -d "${resdir}" ]] && return 4
+	[[ ! -f "${launchexe}" ]] && return 5
 
-	echo -e "$INFO_LABEL Wrote configuration file to $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-}
+	if [[ $cmd && $cmd -eq 1 ]]; then
+		return 10
+	fi
 
-create_keys() {
-	echo -e "$INFO_LABEL Creating registry keys..."
-	${WINE_NOEXPLORER} reg add "HKLM\\SOFTWARE\\KONAMI\\${DIR_TITLE}" /v 'InstallDir' /t 'REG_SZ' /d "C:\Games\\${DIR_TITLE}\\" /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add "HKLM\\SOFTWARE\\KONAMI\\${DIR_TITLE}" /v 'ResourceDir' /t 'REG_SZ' /d "C:\Games\\${DIR_TITLE}\\Resource\\" /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
-	# for experimental wayland driver
-	#${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Drivers' /v 'Graphics' /t 'REG_SZ' /d 'x11,wayland' /f '/reg:64' 2>/dev/null
 	return 0
 }
 
-set_vars() {
-	# set the default prefix location if not specified
-	if [[ ! $installLocation ]]; then
-		[[ $useVerbose ]] && echo -e "$INFO_LABEL Setting install location to ${DEFAULT_INSTALL_LOCATION}"
-		declare -g installLocation="${DEFAULT_INSTALL_LOCATION}"
+# run the launcher
+run_installer() {
+	echo
+}
+
+# run the game
+run_launcher() {
+	log "Searching for ${GAME_TITLE}..."
+	case $(locate_files; echo $?) in
+		1)
+			log "Unable to locate Wineprefix at ${prefixLocation}" err
+			$KDIALOG --title "Failed to launch game" --error "Unable to locate Wineprefix at ${prefixLocation}"
+			exit 21
+			;;
+		2)
+			log "Invalid Wineprefix at ${prefixLocation}" err
+			$KDIALOG --title "Failed to launch game" --error "Invalid Wineprefix at ${prefixLocation}"
+			exit 22
+			;;
+		3)
+			log "Unable to locate installation directory for ${GAME_TITLE}" err
+			$KDIALOG --title "Failed to launch game" --error "Unable to locate installation directory for ${GAME_TITLE}"
+			exit 23
+			;;
+		4)
+			log "Unable to locate resource directory for ${GAME_TITLE}" err
+			$KDIALOG --title "Failed to launch game" --error "Unable to locate resource directory for ${GAME_TITLE}"
+			exit 24
+			;;
+		5)
+			log "Unable to locate launcher executable for ${GAME_TITLE}" err
+			$KDIALOG --title "Failed to launch game" --error "Unable to locate launcher executable for ${GAME_TITLE}"
+			exit 25
+			;;
+		0)
+			log "Found ${GAME_TITLE} launcher (${LAUNCHER_NAME}.exe) within prefix"
+			;;
+	esac
+	if [[ $GAMESCOPE_WAYLAND_DISPLAY || $XDG_CURRENT_DESKTOP == 'gamescope' ]]; then
+		$KDIALOG --title "Gamescope Warning" "You should NOT be running this script directly through a gamescope session.\nPlease enable gamescope support within your configuration file located at $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+		killall -ABRT gamescope-wl
+		exit 134
+	fi
+
+	# check time
+	if [[ $(date -u +%H) -ge 20 && $(date -u +%H) -lt 22 ]]; then
+		approx_time=$(printf '%(%l:%M%P %Z)T\n' "$(date +%s -u -d "22:00")")
+		if [[ "${approx_time:0:1}" == ' ' ]]; then
+			approx_time="${approx_time:1}"
+		fi
+		log "The e-amusement Cloud servers are currently down for maintenance.\nPlease wait until $approx_time and try again." err
+		$KDIALOG --title "Maintenance Notice" --error "The e-amusement Cloud servers are currently down for maintenance.\nPlease wait until $approx_time and try again."
+		exit 20
 	fi
 	
-	# check if the install location exists or not
-	if [[ -e "${installLocation}" ]]; then
-		if [[ -f "${installLocation}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}.exe" ]]; then
-			if [[ $InstallCmd -eq 1 ]]; then
-				echo -e "$ERROR_LABEL The installer has detected existing files for the ${GAME_TITLE} launcher. Installation cannot continue."
-				exit 4
+	if [[ -z "$LOGIN_TOKEN" ]]; then
+		log "No login token was given. Opening launch page in a web browser..." err
+		#export TERM='dumb'
+		#exec xdg-open "${LAUNCH_PAGE}"
+	else
+		# let's get going
+		log "Using login token $LOGIN_TOKEN"
+		[[ -n $paLatency ]] && export PULSE_LATENCY_MSEC=$paLatency
+		export PULSE_SINK='konaste'
+
+		# run loopback device
+		if [[ ! $noLoopback ]]; then
+			log "PipeWire loopback device has not been enabled! You may not have any sound unless your audio sample rate is set to 44.1kHz!" warn
+		else
+			log "Starting PipeWire loopback device..."
+			pw-loopback -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
+		fi
+
+
+		# launch the game
+		${WINESERVER[@]} -p2 # start wineserver
+		log "Executing \033[4m$(echo -n ${LAUNCH_PARAMS[@]})"
+		${LAUNCH_PARAMS[@]} # launch the game
+		log "${LAUNCHER_NAME}.exe process terminated. Waiting for Wineserver process to end.."
+		${WINESERVER[@]} -w # wait for winserver to terminate
+		log "Wineserver process ended. Terminating PipeWire loopback device..."
+		# kill loopback device
+		kill -15 $(jobs -p)
+	fi
+
+	exit $?
+}
+
+# setting variables
+main() {
+	declare -gr INSTALL_DIR="C:\\\\Games\\\\${DIR_TITLE}\\\\"
+	declare -gr RESOURCE_DIR="C:\\\\Games\\\\${DIR_TITLE}\\\\"
+	declare -gr LAUNCHER_EXECUTABLE="C:\\\\Games\\\\${DIR_TITLE}\\\\launcher\\\\modules\\\\${LAUNCHER_NAME}.exe"
+	
+	source_config() {
+		[[ -n $cmd ]] && log "Installation command detected. Skipping config parser..." && return # don't source if running any installation commands
+		if [[ -f "${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf" && -r "${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf" ]]; then
+			log "Found configuration file at ${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf"
+			source "${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf"
+
+			if [[ $useFlatpak && $useFlatpak == 'true' ]]; then
+				log "Using the Flatpak build of Wine is not supported! Use at your own peril." warn
+				declare -gr useFlatpak=true
+				if [[ "$(cd -- $(dirname -- ${prefix}) && pwd)" != "$(cd -- $(dirname -- ${DEFAULT_PREFIX_LOCATION_FLATPAK}) && pwd)" ]]; then
+					log "Using a prefix outside of Flatpak's sandbox is NOT recommended!" warn
+					declare -gr prefixLocation="${prefix}" 2>/dev/null
+				else
+					declare -gr prefixLocation="${DEFAULT_PREFIX_LOCATION_FLATPAK[0]}" 2>/dev/null
+					declare -gr prefixLocationFP="${DEFAULT_PREFIX_LOCATION_FLATPAK[1]}" 2>/dev/null
+				fi
+				
+			else
+				unset useFlatpak
+				if [[ -n $custom_wine ]]; then
+					#log "Using custom Wine build ($(basename -- ${custom_wine}))"
+					declare -gr customWineDir="${custom_wine}" 2>/dev/null
+				else
+					#log "Using system Wine"
+					unset custom_wine
+				fi
+
+				if [[ -n $prefix ]]; then
+					declare -gr prefixLocation="${prefix}"
+				else
+					declare -gr prefixLocation="${DEFAULT_PREFIX_LOCATION}"
+				fi
+
+				unset prefix
 			fi
 
-			[[ $useVerbose ]] && echo -e "$INFO_LABEL Found ${GAME_TITLE} in specified prefix"
+			if [[ $use_winevd && $use_winevd == 'true' ]]; then
+				declare -gr useWineVD=true 2>/dev/null
+			fi
+
+			if [[ $use_gamemode && $use_gamemode == 'true' ]]; then
+				if [[ $(which gamemoderun 2>/dev/null) ]]; then
+					declare -gr useGM=true 2>/dev/null
+				else
+					log "use_gamemode has been set to true, but gamemode was not found on your system."
+				fi
+			fi
+
+			if [[ $use_gamescope && $use_gamescope == 'true' ]]; then
+				if [[ $(which gamescope 2>/dev/null) ]]; then
+					log "It is not recommended to use gamescope!" warn
+					declare -gr useGS=true 2>/dev/null
+					declare -gr useWineVD=true 2>/dev/null
+				else
+					log "use_gamescope has been set to true, but gamescope was not found on your system."
+				fi
+			fi
+
+			if [[ -n $pa_latency ]]; then
+				declare -xg paLatency=$paLatency
+			fi
+
+			if [[ $use_loopback != 'false' ]]; then
+				declare -gr noLoopback=true
+			fi
 		else
-			if [[ $InstallCmd -ne 1 ]]; then
-				echo -e "$ERROR_LABEL ${GAME_TITLE} is not installed to this prefix"
-				exit 4
+			log "Failed to locate configuration file for ${GAME_TITLE}. $(basename -- $0) will use default options." err
+			log "Using '${DEFAULT_PREFIX_LOCATION}' as location for Wineprefix..."
+			declare -gr PREFIX_LOCATION="${DEFAULT_PREFIX_LOCATION}"
+			log "Setting PulseAudio latency to 40ms..."
+			declare -gr pa_latency=40
+			if [[ $(which gamemoderun 2>/dev/null) ]]; then
+				log "Enabling gamemoded..."
+				declare -gr use_winevd=true
+			fi
+			if [[ $XDG_SESSION_TYPE == 'wayland' ]]; then
+				log "Wayland detected; forcing virtual desktop" warn
+				declare -gr use_winevd=true
 			fi
 		fi
-	else
-		if [[ $InstallCmd -eq 1 ]]; then
-			mkdir -p $installLocation 2>/dev/null
-			[[ $? -eq 0 ]] && echo -e "$INFO_LABEL Created new wineprefix directory at ${installLocation}"
+
+		log "Prefix has been set to ${prefixLocation}"
+		#[[ $useFlatpak ]] && log "Using Wine (Flatpak)"
+		#[[ ! $useFlatpak && -n $customWineDir ]] && log "Using custom Wine ($(basename -- ${customWineDir}))"
+		#[[ ! $useFlatpak && -z $customWineDir ]] && log "Using system Wine"
+	}
+
+	set_winevars() {
+		[[ $useVerbose ]] && log "Setting Wine variables..."
+		if [[ $useFlatpak ]]; then
+			if [[ $(which flatpak 2>/dev/null) ]]; then
+				declare -gr WINEBUILD_DIR="$(cd -- $(dirname -- $(which flatpak))/.. && pwd)" 2>/dev/null
+				declare -ag FLATPAK_EXTRA_ARGS=()
+				if [[ -n $(flatpak list --user --app --columns=application | grep -w 'org.winehq.Wine') ]]; then
+					log "Found Wine (Flatpak) in user profile"
+					FLATPAK_EXTRA_ARGS+=( '--user' )
+				elif [[ -n $(flatpak list --system --app --columns=application | grep -w 'org.winehq.Wine') ]]; then
+					log "Found Wine (Flatpak) in system profile"
+					FLATPAK_EXTRA_ARGS+=( '--system' )
+				else
+					log "Wine (Flatpak) has not been installed to your system. Assuming you have the flathub repository added, you can install Wine by running the following command:\n  \033[1mflatpak install org.winehq.Wine\033[39m" err
+					exit 2
+				fi
+
+				# i really, REALLY wish flatpak would be normal
+				declare -gr prefixLocation="$HOME/.var/app/org.winehq.Wine/data/konaste"
+				FLATPAK_EXTRA_ARGS+=( --env=WINEPREFIX="${DEFAULT_PREFIX_LOCATION_FLATPAK[1]}" --env=WINEDEBUG='fixme-all' --env=DXVK_LOG_LEVEL='error' --env=DXVK_FRAME_RATE=120 )
+
+				declare -gr WINE=( "${WINEBUILD_DIR}/bin/flatpak run" "${FLATPAK_EXTRA_ARGS[@]}" --env=WINEDLLOVERRIDES='mscoree;mshtml=d' --command=wine org.winehq.Wine ) 2>/dev/null
+				declare -gr WINE_NOEXPLORER=( "${WINEBUILD_DIR}/bin/flatpak run" "${FLATPAK_EXTRA_ARGS[@]}" --env=WINEDLLOVERRIDES='mscoree;mshtml=d;explorer.exe=d' --command=wine org.winehq.Wine ) 2>/dev/null
+				declare -gr WINEBOOT=( "${WINEBUILD_DIR}/bin/flatpak run" "${FLATPAK_EXTRA_ARGS[@]}" --command=wineboot org.winehq.Wine ) 2>/dev/null
+				declare -gr WINEPATH=( "${WINEBUILD_DIR}/bin/flatpak run" "${FLATPAK_EXTRA_ARGS[@]}" --command=winepath org.winehq.Wine ) 2>/dev/null
+				declare -gr WINESERVER=( "${WINEBUILD_DIR}/bin/flatpak run" "${FLATPAK_EXTRA_ARGS[@]}" --command=wineserver org.winehq.Wine ) 2>/dev/null
+				log "Using Flatpak build of Wine"
+			else
+				log "Flatpak was not found on your system. Please install it from your distribution's package manager." err
+				exit 1
+			fi
 		else
-			echo -e "$ERROR_LABEL couldn't find prefix at ${installLocation}"
-			exit 4
+			# check to see if there's a custom build
+			if [[ -n $customWineDir && $customWineDir != '/usr' && $customWineDir != '/' ]]; then
+				[[ ! -e "${customWineDir}" ]] && log "Couldn't locate custom Wine build directory at ${customWineDir}" err && exit 2
+				[[ ! -d "${customWineDir}" ]] && log "Custom Wine build specified is not a directory" err && exit 2
+				[[ ! -d "${customWineDir}/bin" ]] && log "Couldn't locate ${customWineDir}/bin" err && exit 2
+				[[ ! -e "${customWineDir}/bin/wine" ]] && "Couldn't locate ${customWineDir}/bin/wine" err && exit 2
+				[[ ! -x "${customWineDir}/bin/wine" ]] && "Wine executable in ${customWineDir}/bin exists, but is not executable." err && exit 2
+				log "Using custom Wine build ($(basename -- ${customWineDir}))..."
+				declare -gr WINEBUILD_DIR="${customWineDir}" 2>/dev/null
+			else
+				if [[ $(which wine 2>/dev/null) ]]; then
+					log "Using native build of Wine ($(which wine))"
+					declare -gr WINEBUILD_DIR="$(cd -- $(dirname -- $(which wine))/.. && pwd)" 2>/dev/null
+				else
+					log "Wine was found on your system. If you are trying to use the Flatpak build of Wine, run this script again, but with \033[1m--flatpak\033[0m, or set \033[1m'use_flatpak'\033[0m to true." err
+				fi
+			fi
+
+			# set exports because we're not using flatpak
+			export WINEPREFIX="${prefixLocation}"
+			export WINEDLLOVERRIDES="mscoree;mshtml=d"
+			export WINEDEBUG="fixme-all"
+			export DXVK_LOG_LEVEL='error'
+			export DXVK_FRAME_RATE=120
+			export DXVK_CONFIG="d3d9.maxFrameRate = 120; d3d9.syncInterval = 1"
+
+			declare -gr WINE="${WINEBUILD_DIR}/bin/wine"
+			declare -gr WINE_NOEXPLORER="env WINEDLLOVERRIDES=${WINEDLLOVERRIDES};explorer.exe=d ${WINE}"
+			declare -gr WINEBOOT="${WINEBUILD_DIR}/bin/wineboot"
+			declare -gr WINEPATH="${WINEBUILD_DIR}/bin/winepath"
+			declare -gr WINESERVER="${WINEBUILD_DIR}/bin/wineserver"
 		fi
-	fi
-	
-	if [[ $customWineDir ]]; then	# use custom wine build if specified
-		[[ -n $customWineDir ]] && [[ $customWineDir == '/usr' || $customWineDir == '/' ]] && echo -e "$ERROR_LABEL Are you serious?" && exit 100
-	
-		[[ $useVerbose ]] && echo -e "$INFO_LABEL Attempting to use custom Wine build at $customWineDir..."
-		[[ ! -e "${customWineDir}" ]] && echo -e "$ERROR_LABEL Custom Wine build directory does not exist" && exit 2
-		[[ ! -d "${customWineDir}" ]] && echo -e "$ERROR_LABEL Custom Wine build location is not a directory" && exit 2
-		[[ $useVerbose ]] && echo -e "$INFO_LABEL Found directory at $customWineDir"
+
+		# check wine version
+		[[ $useVerbose ]] && log "Checking Wine version..."
+		IFS='-' read -r -d '(' -a wine_ver < <(${WINE[@]} --version)
+		[[ ${wine_ver[0]} != 'wine' ]] && log "Invalid Wine executable found" err && exit 2
+		for w in ${wine_ver[@]}; do
+			if [[ $(grep -w '.' <<< "$w") ]]; then
+				v=$(cut -d'.' -f1 <<< "$w")
+				if [[ ${v[0]} -lt 9 ]]; then
+					log "This script requires Wine 9.0 or later" err
+					exit 2
+				fi
+			fi
+		done
+		[[ $useVerbose ]] && log "Wine executable has passed the version check."
+
+		if [[ $useVerbose ]]; then
+			log "setting WINE to ${WINE[@]}"
+			log "setting WINE_NOEXPLORER to ${WINE_NOEXPLORER[@]}"
+			log "setting WINEBOOT to ${WINEBOOT[@]}"
+			log "setting WINEPATH to ${WINEPATH[@]}"
+			log "setting WINESERVER to ${WINESERVER[@]}"
+		fi
+
+		return 0
+	}
 		
-		[[ ! -f "${customWineDir}/bin/wine" ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwine\033[0m executable in ${customWineDir}/bin" && exit 2
-		[[ ! -f "${customWineDir}/bin/wineboot" && $InstallCmd -ne 0 ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwineboot\033[0m executable in ${customWineDir}/bin" && exit 2
-		[[ ! -f "${customWineDir}/bin/winepath" && $InstallCmd -ne 0 ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwinepath\033[0m executable in ${customWineDir}/bin" && exit 2
-		[[ ! -f "${customWineDir}/bin/wineserver" ]] && echo -e "$ERROR_LABEL Unable to find \033[1mwineserver\033[0m executable in ${customWineDir}/bin" && exit 2
-		[[ $useVerbose ]] && echo -e "$INFO_LABEL Found all necessary Wine exectuables in ${customWineDir}"
-		[[ ! $useVerbose ]] && echo -e "$INFO_LABEL Found custom Wine build ($(basename -- ${customWineDir}))"
-
-		if [[ -f ${customWineDir}/bin/wine64 ]]; then
-			WINE="${customWineDir}/bin/wine64"
-		else
-			WINE="${customWineDir}/bin/wine"
+	set_installervars() {
+		[[ $useVerbose ]] && log "Setting installation variables..."
+	
+		if [[ $cmd -eq 1 ]]; then
+			# check for dependencies
+			if [[ ! $cliDownloader ]]; then
+				if [[ $(which wget 2>/dev/null) ]]; then
+					log "Using wget for downloading files..."
+					declare -gr DOWNLOADER="$(which wget)"
+				elif [[ $(which curl 2>/dev/null) ]]; then
+					log "Using curl for downloading files..."
+					declare -gr DOWNLOADER="$(which curl)"
+				else
+					log "Could not find a suitable CLI download utility. Installation of ${GAME_TITLE} cannot continue." err
+					exit 2
+				fi
+			else
+				if [[ ! $(which "${cliDownloader}" 2>/dev/null) ]]; then
+					log "--use-downloader is set to ${cliDownloader}, but ${cliDownloader} was not found on your system." err
+					exit 2
+				else
+					log "Using ${cliDownloader} for downloading files..."
+					declare -gr DOWNLOADER="$(which ${cliDownloader})"
+				fi
+			fi
+	
+			if [[ $(which msiextract 2>/dev/null) ]]; then
+				log "Found msiextract at $(which msiextract)"
+				declare -gr MSIEXTRACT="$(which msiextract)"
+			else
+				log "Could not find executable for msiextract. Please install \033[1mmsitools\033[0m from your distro's package manager." err
+				exit 2
+			fi
 		fi
-		
-		WINE_NOEXPLORER="env WINEDLLOVERRIDES='explorer.exe=d' ${WINE}"
-		[[ $InstallCmd -ne 0 ]] && WINEBOOT="${customWineDir}/bin/wineboot"
-		WINEPATH="env WINEDLLOVERRIDES='explorer.exe=d;services.exe=d' ${customWineDir}/bin/winepath"
-		WINESERVER="${customWineDir}/bin/wineserver"
-	else # use system wine
-		echo -e "$WARN_LABEL Attempting to use system Wine..."
-		[[ -z $(which wine 2>/dev/null) ]] && echo -e "$ERROR_LABEL Wine is not installed on your system" && exit 2
-		[[ -z $(which wineboot 2>/dev/null) && $InstallCmd -ne 0 ]] && echo -e "$ERROR_LABEL Wine is not installed on your system (missing: wineboot)" && exit 2
-		[[ -z $(which winepath 2>/dev/null) && $InstallCmd -ne 0 ]] && echo -e "$ERROR_LABEL Wine is not installed on your system (missing: winespath)" && exit 2
-		[[ -z $(which wineserver 2>/dev/null) ]] && echo -e "$ERROR_LABEL Wine is not installed on your system (missing: wineserver)" && exit 2
-		[[ $useVerbose ]] && echo -e "$INFO_LABEL Found all necessary Wine exectuables"
-		[[ ! $useVerbose ]] && echo -e "$INFO_LABEL Found Wine"
-
-		# some distros do not have a wine64 executable, so use the normal wine executable if possible
-		if [[ -n $(which wine64 2>/dev/null) ]]; then
-			WINE="$(which wine64)"
-		else
-			WINE="$(which wine)"
+	
+		# icon creation
+		# TODO: find a simpler way of creating icons
+		if [[ $cmd -eq 3 || $cmd -eq 1 ]]; then
+			if [[ $(which magick 2>/dev/null) ]]; then
+				log "Could not find executable for magick. You will not be able to create icons for ${GAME_TITLE}" warn
+			else
+				log "Using magick ($(which magick)) for creating icons..."
+				declare -gr MAGICK="$(which magick)"
+			fi
 		fi
-		WINE_NOEXPLORER="env WINEDLLOVERRIDES='explorer.exe=d' ${WINE}"
-		[[ $InstallCmd -ne 0 ]] && WINEBOOT="$(which wineboot)"
-		WINEPATH="env WINEDLLOVERRIDES='explorer.exe=d;services.exe=d' $(which winepath)"
-		WINESERVER="$(which wineserver)"
+	}
+
+	set_gamevars() {
+		[[ $useVerbose ]] && log "Setting gameplay variables..."
+		[[ ! $(which kdialog 2>/dev/null) ]] && log "Unable to find executable for \033[1mkdialog\033[0m." err && exit 5
+		[[ ! $(which pw-loopback 2>/dev/null) ]] && log "Unable to find executable for \033[1mpw-loopback\033[0m." err && exit 6
+		[[ ! $(which notify-send 2>/dev/null) ]] && log "Unable to find executable for \033[1mnotify-send\033[0m." err && exit 7
+
+		declare -gr KDIALOG="$(which kdialog)"
+		declare -gr PW_LOOPBACK="$(which pw-loopback)"
+		declare -gr NOTIFYSEND="$(which pw-loopback)"
+		declare -ag LAUNCH_PARAMS=()
+
+		[[ $useGM && $useGM == 'true' ]] && LAUNCH_PARAMS+=( "$(which gamemoderun)" )
+		[[ $useGS && $useGS == 'true' ]] && LAUNCH_PARAMS+=( "$(which gamescope) -H 1080 -W 1920 -h 1080 -w 1920 -r 120 --framerate-limit 120 -f --" )
+		LAUNCH_PARAMS+=( "env LANG=ja_JP.UTF-8" "${WINE[@]} start /high /wait" )
+		[[ $useWineVD && $useWineVD == 'true' ]] && LAUNCH_PARAMS+=( "explorer /desktop=${SIMPLE_NAME},1920x1080" )
+		LAUNCH_PARAMS+=( "${LAUNCHER_EXECUTABLE[@]}" "$LOGIN_TOKEN" )
+	}
+
+	source_config
+	set_winevars
+	if [[ -n $cmd ]]; then # run an installation function
+		set_installervars
+		run_installer $cmd
+	else # run the game
+		set_gamevars
+		run_launcher
 	fi
 
-	# display info about everything if verbose is enabled
-	[[ $useVerbose && ! $useFlatpak ]] && echo -e "$INFO_LABEL All installer variables have been set!\nwine: ${WINE}\nwineboot: ${WINEBOOT}\nwinepath: ${WINEPATH}\nwineserver: ${WINESERVER}\n"
-	[[ $useVerbose ]] && echo "install location: ${installLocation}"
-
-	# set exports if not using flatpak
-	[[ ! $useFlatpak ]] && export WINEPREFIX="${installLocation}"
-	[[ ! $useFlatpak ]] && export WINEDEBUG='fixme-all'
-	[[ ! $useFlatpak && $InstallCmd -eq 0 ]] && export DXVK_FRAME_RATE=120
-	[[ ! $useFlatpak ]] && export WINEDLLOVERRIDES='mscoree'
-	#[[ ! $useFlatpak ]] && export DXVK_HUD='fps'
-
-	# proton-specific exports
-	# dunno why you would want to use it, but whatever
-	#[[ ! $useFlatpak ]] && export PROTON_NO_D3D11=1
-	#[[ ! $useFlatpak ]] && export PROTON_NO_D3D10=1
-	#[[ ! $useFlatpak ]] && export PROTON_NO_ESYNC=1
-	#[[ ! $useFlatpak ]] && export PROTON_NO_FSYNC=1
-	
-
-	# set variables as read only
-	declare -gr instdir="C:\\Games\\${DIR_TITLE}\\"
-	declare -gr resdir="C:\\Games\\${DIR_TITLE}\\Resource"
-	declare -r useFlatpak 2>/dev/null
-	declare -r customWineDir 2>/dev/null
-	declare -r installLocation 2>/dev/null
-
-	# some wine versions use weird names, so this script may block some valid wine versions.
-	# sorry.
-	[[ $("${WINE}" --version | cut -d'.' -f1 | cut -c6- ) -lt 9 ]] && echo -e "$ERROR_LABEL This script requires Wine 9.0 or later." && exit 9
-	return 0
+	return $?
 }
 
-# parse flags
-parse_flags() {
-	[[ $# -eq 0 ]] && echo -e "$ERROR_LABEL No command provided. Type \033[0m$0 help\033[0m for a list of usable commands" && exit 1
 
+if [[ $# -gt 0 ]]; then
 	while [[ $# -gt 0 ]]; do
-		cArg="$1"
-		if [[ "${cArg:0:2}" == '--' ]]; then
-			case "${cArg:2}" in
+		if [[ "${1:0:2}" == '--' ]]; then
+			arg="${1##*=}"
+			case "${1:2}" in
 				verbose)
-					declare -gr useVerbose=true 2>/dev/null
+					declare -g useVerbose=true 2>/dev/null
 					;;
 				flatpak)
-					echo -e "$ERROR_LABEL Flatpak is disabled because it doesn't want to be normal."
-					exit 99
-					[[ $customWineDir ]] && echo -e "$ERROR_LABEL \033[1m--flatpak\033[0m and \033[1m--winebuild\033[0m cannot be used at the same time" && exit 1
-					declare -gr useFlatpak=true 2>/dev/null
+					[[ -n $customWineDir ]] && log "Argument --flatpak cannot be used with --winebuild" err && exit 1
+					declare -g useFlatpak=true 2>/dev/null
 					;;
 				prefix|prefix=*)
-					[[ -z "${1##*=}" || "${cArg:2}" == 'prefix' ]] && echo -e "$ERROR_LABEL No prefix location specified" && exit 1
-					[[ -n $installLocation ]] && unset installLocation
-					declare -g installLocation="${1##*=}"
+					[[ -z "${arg}" ]] && log "No custom Wine build directory specified." err && exit 1
+					[[ -n $useFlatpak ]] && log "Using a custom prefix location with Flatpak may lead to issues!" warn
+					declare -g prefixLocation="${arg}" 2>/dev/null
 					;;
 				winebuild|winebuild=*)
-					[[ $useFlatpak ]] && echo -e "$ERROR_LABEL \033[1m--flatpak\033[0m and \033[1m--winebuild\033[0m cannot be used at the same time" && exit 1
-					[[ -z "${1##*=}" || "${cArg:2}" == 'winebuild' ]] && echo -e "$ERROR_LABEL No Wine build directory specified" && exit 1
-					[[ -n $customWineDir ]] && unset customWineDir
-					declare -g customWineDir="${1##*=}"
+					[[ -n $useFlatpak ]] && echo -e log "Argument --winebuild cannot be used with --flatpak" err && exit 1
+					[[ -z "${arg}" ]] && log "No custom Wine build directory specified." err && exit 1
+					declare -g customWineDir="${arg}" 2>/dev/null
+					;;
+				use-downloader|use-downloader=*)
+					[[ -z "${arg}" ]] && log "No CLI download utility specified." err && exit 1
+					if [[ "${arg}" == 'curl' || "${arg}" == 'wget' ]]; then
+						declare -gr cliDownloader="${arg}" 2>/dev/null
+					else
+						echo -e log "Unknown CLI download utility \033[1m${arg}\033[0m" err
+						exit 1
+					fi
+					;;
+				'no-dxvk')
+					declare -g noDXVK=true 2>/dev/null
 					;;
 				*)
-					echo -e "$ERROR_LABEL Unknown argument \033[0m$cArg\033[0m"
+					echo -e log "Unknown argument $1. Type \033[39m$(basename -- $0)\033[91m help for a list of usable arguments" err
 					exit 1
 					;;
 			esac
-		# show help
 		else
-			case "$cArg" in
-				help)
-cat <<EOM
-
-Infinitas for Linux install script by Mizzt (mizztgc)
-https://github.com/mizztgc/infinitas-for-linux
-
-General commands/arguments:
-  help: Shows this message
-  
-Install commands:
-  install: Install ${GAME_TITLE}
-  uninstall: Uninstall ${GAME_TITLE}
-
-Install arguments:
-  --flatpak: Use the Flatpak build of Wine over your system's native build (NOT RECOMMENDED)
-  --prefix: Set the location of the prefix (default: ~/.local/share/konaste)
-    ex: --prefix=/path/to/prefix
-  --winebuild: Use a custom build of Wine for installation (cannot be used with --flatpak)
-    ex: --winebuild=/path/to/winebuild_dir
-  --verbose: Output more information during installation
-
-Post-install commands:
-  create-icons: Generates the icons for ${GAME_TITLE} (requires imagemagick)
-  create-launcher: Generates a new .desktop launcher for opening the game
-  fix-registry: Fixes the registry keys in the prefix to help the game run
-
-EOM
-						exit 0
+			case "$1" in
+				install)
+					declare -gr cmd=1 2>/dev/null
 					;;
-				${URI}://*)
-					[[ $InstallCmd ]] && echo -e "$ERROR_LABEL You can only specify one command" && exit 9
-					declare -gr InstallCmd=0
-					declare -gr LAUNCH_TOKEN="$1"
-					;;	
-				'install')
-					[[ $InstallCmd ]] && echo -e "$ERROR_LABEL You can only specify one command" && exit 9
-					declare -gr InstallCmd=1
-					;;
-				'uninstall')
-					[[ $InstallCmd ]] && echo -e "$ERROR_LABEL You can only specify one command" && exit 9
-					declare -gr InstallCmd=2
-					;;
-				'create-icons')
-					[[ $InstallCmd ]] && echo -e "$ERROR_LABEL You can only specify one command" && exit 9
-					declare -gr InstallCmd=3
+				uninstall)
+					declare -gr cmd=2 2>/dev/null
 					;;
 				'create-launcher')
-					[[ $InstallCmd ]] && echo -e "$ERROR_LABEL You can only specify one command" && exit 9
-					declare -gr InstallCmd=4
+					declare -gr cmd=3 2>/dev/null
+					;;
+				'create-icons')
+					declare -gr cmd=4 2>/dev/null
 					;;
 				'fix-registry')
-					[[ $InstallCmd ]] && echo -e "$ERROR_LABEL You can only specify one command" && exit 9
-					declare -gr InstallCmd=5
+					declare -gr cmd=5 2>/dev/null
 					;;
-				*)
-					echo -e "$ERROR_LABEL Unknown command \033[1m$cArg\033[0m"
-					exit 1		
+				"${URI}"://*)
+					[[ $TERM != 'dumb' ]] && log "Avoid passing launch tokens directly to this script." warn
+					declare -gr LOGIN_TOKEN="$1" 2>/dev/null
+					break
+					;;
 			esac
 		fi
 
 		shift
 	done
-	unset cArg
-}
+fi
 
-# TODO: redo this entire part
-#	- only parse flags when running install function
-#	- only source and parse config file when a login token is passed to this script 
-
-source_config		# source the config file for post-install commands
-parse_flags $@		# parse all arguments and commands
-set_vars			# set script variables and lock them
-case $InstallCmd in
-	0)	# launch game
-		[[ "$TERM" != 'dumb' ]] && echo -e "$ERROR_LABEL Don't try to pass login tokens directly to this script." && exit 1
-	
-		[[ -z $(which kdialog 2>/dev/null) ]] && echo -e "$ERROR_LABEL Cannot find kdialog" && exit 2
-		[[ -z $(which notify-send 2>/dev/null) ]] && echo -e "$ERROR_LABEL Cannot find notify-send" && exit 2
-		[[ -z $(which pw-loopback 2>/dev/null) ]] && echo -e "$ERROR_LABEL Cannot find pw-loopback" && exit 2
-		show_error_box() {
-			kdialog --title "Failed to launch game" --error "$1" 2>/dev/null
-			exit $2
-		}
-
-		# block gamescope
-		if [[ $GAMESCOPE_WAYLAND_DISPLAY || $XDG_CURRENT_DESKTOP == 'gamescope' ]]; then
-			[[ $TERM != 'dumb' ]] && echo -e "\n\n\t\033[1;91m!!! DO NOT RUN THIS SCRIPT DIRECTLY THROUGH GAMESCOPE !!!\033[0m\n\n"
-			[[ $TERM == 'dumb' ]] && show_error_box "You should NOT be running this script directly through a gamescope session.\nPlease enable gamescope support within your configuration file located at $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf" 134
-			killall -ABRT gamescope-wl
-			exit 134
-		fi
-
-		# check time
-		if [[ $(date -u +%l) -ge 20 && $(date -u +%l) -lt 22 ]]; then
-			approx_time=$(printf '%(%l:%M%P %Z)T\n' "$(date +%s -u -d "22:00")")
-			if [[ "${approx_time:0:1}" == ' ' ]]; then
-				approx_time="${approx_time:1}"
-			fi
-			show_error_box "The e-amusement Cloud servers are currently down for maintenance.\nPlease wait until $approx_time and try again." 10
-		fi
-
-		# make sure the game is installed
-		case $(is_game_installed; echo $?) in
-			0)
-				echo "Found ${GAME_TITLE} Launcher"
-				;;
-			1|2|3)
-				show_error_box "${GAME_TITLE} is not installed.\nRun '$(basename -- $0) install' in a terminal to install the game." 1
-				;;
-			4)
-				show_error_box "Couldn't find ${GAME_TITLE} launcher executable."
-				;;
-		esac
-
-		# open the website if no launch token is given
-		[[ ! "$LAUNCH_TOKEN" ]] && show_error_box "No login string provided" 1
-		if [[ $URI == 'bm2dxinf' ]]; then
-			[[ "${#LAUNCH_TOKEN}" -ne 89 && "${#LAUNCH_TOKEN}" -ne 91 ]] && show_error_box "Login string provided is an invalid length" 3
-			[[ "${LAUNCH_TOKEN:85}" != 'rel=' && "${LAUNCH_TOKEN:85}" != 'trial=' ]] && show_error_box "Login string contains an unknown mode: ${LAUNCH_TOKEN:85:-1}" 4
-		fi
-
-		# get launch parameters going
-		declare -a prelaunchParam
-		declare -a wineParam
-
-		if [[ -n $use_gamemode && $use_gamemode == 'true' ]]; then
-			if [[ -n $(which gamemoderun 2>/dev/null) ]]; then
-				prelaunchParam+="$(which gamemoderun) "
-			fi
-		fi
-
-		if [[ -n $use_gamescope && $use_gamescope == 'true' ]]; then
-			if [[ -n $(which gamescope 2>/dev/null) ]]; then
-				notify-send "Gamescope Warning" -a "${GAME_TITLE}" -i "dialog-warning" -t 5000 "Gamescope support is currently experimental and has a lot of issues with Wine. You may also need to manually kill this process when you are done playing."
-				prelaunchParam+="$(which gamescope) -W 1920 -H 1080 -w 1920 -h 1080 -r 120 --framerate-limit 120 -f -- "
-				sleep 2	# give the user more time to read the warning
-			else
-				notify-send "Gamescope not found!" -a "${GAME_TITLE}" -i "dialog-warning" "Gamescope support has been enabled in your configuration file, but gamescope was not found on your system."
-			fi
-		fi
-
-		prelaunchParam+="env LANG=ja_JP.UTF-8"
-
-		if [[ $useFlatpak ]]; then
-			show_error_box "Flatpak is disabled because it doesn't want to be normal.\nPlease play this game through a native build of Wine." 99
-		fi
-
-		# if you frequently see a 5-1501-0003 error, you can thank xwayland for that. this is because xwayland only
-		# allows applications to run at your currently set refresh rate, which means at either 60 or 120hz, the game will
-		# start up. anything other than that, and you're getting that error code.
-		# the only real fix for this would be to just play in an Xorg session, but if you insist on using wayland, you should either:
-		#	1. set use_winevd in your config file to 'true'
-		#	2. manually set your refresh rate to 60Hz (or 120Hz if supported)
-		if [[ "$XDG_SESSION_TYPE" == 'wayland' ]]; then
-			if [[ ! $use_winevd ]]; then
-				notify-send "Wayland Warning" -a "${GAME_TITLE}" -i "dialog-warning" -t 10000 "It is not recommended to play ${GAME_TITLE} in a Wayland session. Please either play in an Xorg session or set 'use_winevd' in your configuration file to 'true'."
-				#declare -x DISPLAY=
-				sleep 2
-			fi
-		fi
-
-		# "well why not just force the refresh rate to 120Hz through the registry?"
-		# that has no effect outside of a virtual desktop. it's all xwayland's fault.
-
-		wineParams+='start /high'
-		if [[ -n $use_winevd && $use_winevd == 'true' ]]; then
-			wineParams+=' explorer /desktop=Infinitas,1920x1080'
-		fi
-		launchParam+=" $LAUNCH_TOKEN"
-
-		"${WINESERVER}" -p10 # start wineserver and make it persistent for a bit
-		# start loopback device
-		pw-loopback -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=infinitas node.description=infinitas audio.rate=44100' &
-		export PULSE_SINK='infinitas' # to ensure the wine process defaults to using this loopback instead of your system's defaults.
-		[[ -n $pa_latency ]] && export PULSE_LATENCY_MSEC=$pa_latency	# export pulseaudio latency variable if found in config
-		${prelaunchParam} "${WINE}" ${wineParams} "C:\\Games\\${DIR_TITLE}\\launcher\\modules\\${LAUNCHER_NAME}.exe" "$LAUNCH_TOKEN" > /dev/null	# and now we launch the game
-		"${WINESERVER}" -w 	# wait for wineserver to terminate
-		sleep 1
-		kill -15 $(jobs -p) 2>/dev/null	# kill all processes
-		exit 0
-		;;
-	1)	# install
-		dependency_check
-		sleep 2
-		
-		# show disclaimer
-		echo -e $disclaimer
-		ynPrompt "Do you agree to these terms?"
-		if [[ "$?" -ne 0 ]]; then
-			echo -e "$ERROR_LABEL You have not accepted the agreement. Exiting installer..."
-			exit 1
-		fi
-
-		mkdir $TEMP_DIRECTORY
-		cd $TEMP_DIRECTORY
-
-		"${WINESERVER}" -p
-
-		if [[ ! -f "$installLocation/system.reg" ]]; then
-			"${WINEBOOT}" -i 2>/dev/null
-		fi
-
-		# download game files
-		echo -e "$INFO_LABEL Downloading installer for ${GAME_TITLE}..."
-		if [[ -f "$TEMP_DIRECTORY/$(basename -- $INSTALLER_LINK)" ]]; then
-			echo -e "$INFO_LABEL" "Skipped: Found ${GAME_TITLE} installer..."
-		else
-			wget -q "$INSTALLER_LINK"
-			if [[ $? -ne 0 ]]; then
-				echo -e "$ERROR_LABEL Failed to download ${GAME_TITLE} launcher!"
-				exit 2
-			fi
-		fi
-
-		# extract gamefiles
-		echo -e "$INFO_LABEL Extracting files from installer..."
-		msiextract "$TEMP_DIRECTORY/$(basename -- $INSTALLER_LINK)" > /dev/null
-		mkdir "$TEMP_DIRECTORY/Games/${DIR_TITLE}/Resource"
-		
-		[[ -d $TEMP_DIRECTORY/System64 ]] && mv $TEMP_DIRECTORY/System64/* "${installLocation}/dosdevices/c:/windows/system32/"
-		[[ -d $TEMP_DIRECTORY/Win ]] && mv $TEMP_DIRECTORY/Win/System64/* "${installLocation}/dosdevices/c:/windows/system32/"
-		echo -e "$INFO_LABEL Installing DirectX 9.0c Redist..."
-		"${WINE}" "$TEMP_DIRECTORY/Games/${DIR_TITLE}/DirectX 9.0c Redist/DXSETUP.exe" '/silent'
-		if [[ $? -ne 0 ]]; then
-			echo -e "$ERROR_LABEL Failed to install DirectX 9.0c Redist!"
-		fi
-		rm -rf "$TEMP_DIRECTORY/Games/${DIR_TITLE}/DirectX 9.0c Redist"
-		rm -rf "$TEMP_DIRECTORY/System64" "$TEMP_DIRECTORY/Win"
-		
-		# download vcr2010
-		echo -e "$INFO_LABEL Downloading Microsoft Visual C++ Redist 2010..."
-		if [[ -f "$TEMP_DIRECTORY/vcredist_x64.exe" ]]; then
-			echo -e "$INFO_LABEL Skipped: Found vcr2010 installer..."
-		else
-			wget -q "$VCR2010_LINK"
-			if [[ "$?" -ne 0 ]]; then
-				echo -e "$ERROR_LABEL Failed to download Visual C++ Redist 2010!"
-				exit 2
-			fi
-		fi
-		
-		# install vcr2010
-		echo -e "$INFO_LABEL Installing Microsoft Visual C++ Redist 2010..."
-		"${WINE}" 'vcredist_x64.exe' '/quiet'
-		if [[ $? -ne 0 ]]; then
-			echo -e "$ERROR_LABEL Failed to install Visual C++ Redist 2010!"
-		fi
-		
-		# install dxvk
-		echo -e "$INFO_LABEL Downloading DXVK..."
-		if [[ -f "$TEMP_DIRECTORY/$(basename -- $DXVK_LINK)" ]]; then
-			echo -e "$INFO_LABEL" "Skipped: Found DXVK archive..."
-		else
-			wget -q "$DXVK_LINK"
-			if [[ $? -ne 0 ]]; then
-				echo -e "$ERROR_LABEL Failed to download DXVK archive!"
-				exit 2
-			fi
-		fi
-		
-		# extract dxvk archive
-		echo -e "$INFO_LABEL Extracting DXVK archive..."
-		tar -zxf $(basename -- $DXVK_LINK)
-		echo -e "$INFO_LABEL Moving .dll files from archive..."
-		cp -Lf $TEMP_DIRECTORY/dxvk*/x64/d3d9.dll "${installLocation}/dosdevices/c:/windows/system32/"
-		cp -Lf $TEMP_DIRECTORY/dxvk*/x32/d3d9.dll "${installLocation}/dosdevices/c:/windows/syswow64/"
-		${WINE_NOEXPLORER} reg add 'HKCU\Software\Wine\DllOverrides' /v 'd3d9' /d 'native,builtin' /f '/reg:64'
-
-		create_icons
-		create_launcher
-		create_config
-		create_game_config
-		create_keys
-		
-		cp -Lr "$TEMP_DIRECTORY/Games" "$(${WINEPATH} -u 'C:\\')"
-		rm -rf "$TEMP_DIRECTORY"
-		$WINESERVER -k
-		
-		echo -e "\033[1;92m${GAME_TITLE} has been successfully installed!\033[0m"
-		echo -e "\033[1mRemember to set your audio mode to WASAPI (Shared). otherwise ${GAME_TITLE} will NOT start!\033[0m"
-		exit
-		;;
-
-	2)	# uninstall
-		# TODO: implement this
-		echo -e "$ERROR_LABEL not yet implemented."
-		exit 1
-		;;
-	3) # create icons
-		create_icons
-		;;
-	4) # create launcher
-		create_launcher
-		;;
-	5) # fix registry keys
-		create_keys
-		"${WINESERVER}" -k
-		exit 0
-		;;
-esac
-exit $?
+main; exit $?
