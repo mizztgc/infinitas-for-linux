@@ -1,4 +1,4 @@
-# Infinitas for Linux
+# Infinitas for Linux (Testing)
 An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash
 
 Be sure to check out the [wiki](https://github.com/mizztgc/infinitas-for-linux/wiki) for some helpful information
