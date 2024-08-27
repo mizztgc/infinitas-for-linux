@@ -167,15 +167,15 @@ locate_files() {
 	[[ ! -e "${prefixLocation}" ]] && return 1
 	[[ ! -f "${prefixLocation}/system.reg" ]] && return 2
 		
-	if [[ $useFlatpak ]]; then
-		instDir="${prefixLocation}/dosdevices/c:/Games/${DIR_TITLE}"
-		resdir="${prefixLocation}/dosdevices/c:/Games/${DIR_TITLE}/Resource"
-		launchexe="${prefixLocation}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}.exe"
-	else
+	#if [[ $useFlatpak ]]; then
+	#	instDir="${prefixLocation}/dosdevices/c:/Games/${DIR_TITLE}"
+	#	resdir="${prefixLocation}/dosdevices/c:/Games/${DIR_TITLE}/Resource"
+	#	launchexe="${prefixLocation}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}.exe"
+	#else
 		instDir="$(${WINEPATH[@]} -u "${INSTALL_DIR}" 2>/dev/null)"
 		resdir="$(${WINEPATH[@]} -u "${RESOURCE_DIR}" 2>/dev/null)"
 		launchexe="$(${WINEPATH[@]} -u "${LAUNCHER_EXECUTABLE}" 2>/dev/null)"
-	fi
+	#fi
 
 	[[ ! -d "${instDir}" ]] && return 3
 	[[ ! -d "${resdir}" ]] && return 4
@@ -839,6 +839,35 @@ if [[ $# -gt 0 ]]; then
 			esac
 		else
 			case "$1" in
+				help)
+cat <<EOM
+
+Infinitas for Linux install script by Mizzt (mizztgc)
+https://github.com/mizztgc/infinitas-for-linux
+
+General commands/arguments:
+  help: Shows this message
+
+Install commands:
+  install: Install ${GAME_TITLE}
+  uninstall: Uninstall ${GAME_TITLE} (not yet implemented)
+
+Install arguments:
+  --prefix: Set the location of the prefix (default: ~/.local/share/konaste)
+    ex: --prefix=/path/to/prefix
+  --winebuild: Use a custom build of Wine for installation
+    ex: --winebuild=/path/to/winebuild_dir
+  --verbose: Output more information during installation
+  --no-dxvk: Do not install DXVK to the Wineprefix
+
+Post-install commands:
+  create-icons: Generates the icons for ${GAME_TITLE} (requires imagemagick)
+  create-launcher: Generates a new .desktop launcher for opening the game
+  fix-registry: Fixes the registry keys in the prefix to help the game run
+
+EOM
+						exit 0
+					;;
 				install)
 					declare -gr cmd=1 2>/dev/null
 					;;
