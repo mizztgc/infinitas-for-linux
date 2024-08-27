@@ -550,6 +550,10 @@ main() {
 				#	declare -gr useFlatpak=true 2>/dev/null
 				#fi
 
+				if [[ -n $custom_wine ]]; then
+					declare -gr customWineDir="${custom_wine}"
+				fi
+
  				if [[ -n $prefix ]]; then
 					declare -gr prefixLocation="${prefix}"
 				else
