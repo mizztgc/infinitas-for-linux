@@ -28,7 +28,7 @@ This script requires the following dependencies:
 * **xdg-utils** (required; to handle the `bm2dxinf://` URI)
 * **kdialog** (required; for showing error message boxes)
 * **msitools** (game install only; for extracting the files from the installer)
-* **wget** OR **curl** (game install only; for downloading the installer)
+* **wget**/**curl** (game install only; for downloading the installer)
 * **tar** (game install only; for extracting the files for DXVK)
 * **imagemagick** (game install only; for generating icons)
 
