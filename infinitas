@@ -236,7 +236,6 @@ MimeType=x-scheme-handler/bm2dxinf
 Icon=${SIMPLE_NAME}
 Description=Play ${GAME_TITLE} on Linux
 Type=Application
-Exec=xdg-open ${LAUNCH_PAGE}
 EOF
 
 	[[ $UID -eq 0 ]] && echo "Exec=$(basename -- $0) %u" >> $appsFolder/"${SIMPLE_NAME}.desktop"
