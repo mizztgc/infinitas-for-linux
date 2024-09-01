@@ -1,4 +1,6 @@
-Infinitas for Linux is meant to be used for installing and playing beatmania IIDX INFINITAS on Linux. However, it wasn't just made for that game in particular, as it can play other Konaste games out there. If you're interested in using this script for playing any of the Konaste games below, just copy and paste the variables for the game you want to install to the script. Oh, and be sure to rename the script as well.
+Infinitas for Linux is meant to be used for installing and playing beatmania IIDX INFINITAS on Linux. However, it wasn't just made for that
+game in particular, as it can play other Konaste games out there. If you're interested in using this script for playing any of the Konaste 
+games below, just copy and paste the variables for the game you want to install to the script. Oh, and be sure to rename the script as well.
 
 [beatmania IIDX INFINITAS]
 GAME_TITLE='beatmania IIDX INFINITAS'
