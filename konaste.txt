@@ -1,0 +1,64 @@
+Infinitas for Linux is meant to be used for installing and playing beatmania IIDX INFINITAS on Linux. However, it wasn't just made for that game in particular, as it can play other Konaste games out there. If you're interested in using this script for playing any of the Konaste games below, just copy and paste the variables for the game you want to install to the script. Oh, and be sure to rename the script as well.
+
+[beatmania IIDX INFINITAS]
+GAME_TITLE='beatmania IIDX INFINITAS'
+DIR_TITLE="${GAME_TITLE}"
+SIMPLE_NAME="infinitas"
+INSTALLER_LINK="https://d1rc4pwxnc0pe0.cloudfront.net/v2/installer/infinitas_installer_2022060800.msi"
+LAUNCH_PAGE="https://p.eagate.573.jp/game/infinitas/2/api/login/login.html"
+LAUNCHER_NAME='bm2dx_launcher'
+URI='bm2dxinf'
+
+[SOUND VOLTEX EXCEED GEAR コナステ]
+GAME_TITLE='SOUND VOLTEX EXCEED GEAR コナステ'
+DIR_TITLE='SOUND VOLTEX EXCEED GEAR'
+SIMPLE_NAME="sdvx-exceedgear"
+INSTALLER_LINK="https://dks1q2aivwkd6.cloudfront.net/vi/installer/sdvx_installer_2022011800.msi"
+LAUNCH_PAGE="https://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=sdvx"
+LAUNCHER_NAME='launcher'
+URI='konaste.sdvx'
+
+[DanceDanceRevolution GRANDPRIX]
+GAME_TITLE='DanceDanceRevolution GRAND PRIX'
+DIR_TITLE='DanceDanceRevolution'
+SIMPLE_NAME="ddr-gp"
+INSTALLER_LINK="https://d2el0dli9l0x2p.cloudfront.net/installer/ddr_installer_2022012601.msi"
+LAUNCH_PAGE="http://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=ddr"
+LAUNCHER_NAME='launcher'
+URI='konaste.ddr'
+
+[GITADORA]
+GAME_TITLE='GITADORA コナステ'
+DIR_TITLE='GITADORA'
+SIMPLE_NAME="gitadora"
+INSTALLER_LINK="https://d1omkh45tn6edw.cloudfront.net/inst/GITADORA_installer.msi"
+LAUNCH_PAGE="http://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=gitadora"
+LAUNCHER_NAME='launcher'
+URI='konaste.gitadora'
+
+[ノスタルジア (NOSTALGIA)]
+GAME_TITLE='ノスタルジア'
+DIR_TITLE='NOSTALGIA'
+SIMPLE_NAME="nostalgia"
+INSTALLER_LINK="https://d26kzmeiv4899f.cloudfront.net/installer/NOSTALGIA_installer.msi"
+LAUNCH_PAGE="http://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=NOSTALGIA"
+LAUNCHER_NAME='launcher'
+URI='konaste.nostalgia'
+
+[pop'n music Lively]
+GAME_TITLE='pop'n music Lively'
+DIR_TITLE="${GAME_TITLE}"
+SIMPLE_NAME="popn"
+INSTALLER_LINK="https://d1twxdn5j8sbm3.cloudfront.net/installer/popn_installer_2021021801.msi"
+LAUNCH_PAGE="https://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=popn-music"
+LAUNCHER_NAME='launcher'
+URI='konaste.popn-music'
+
+[ボンバーガール]
+GAME_TITLE='ボンバーガール'
+DIR_TITLE='BomberGirl'
+SIMPLE_NAME="bombergirl"
+INSTALLER_LINK="https://d1q1iflay6y5jj.cloudfront.net/Installer/2021122200_b37bc853/BomberGirl_Installer.msi"
+LAUNCH_PAGE="https://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=bomber-girl"
+LAUNCHER_NAME='launcher'
+URI='konaste.bomber-girl'
