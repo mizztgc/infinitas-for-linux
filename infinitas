@@ -13,17 +13,20 @@
 # this script.
 #
 # Play at your own risk.
+
+# TODO:
+#	- repurpose this script for playing other konaste games(?)
+#	- find a simpler way for generating icons (i don't know if i can redistribute them)
+#	- add localized strings for the japanese/korean bros
+#	- graphical installer
+
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 DEFAULT_PREFIX_LOCATION="$HOME/.local/share/konaste"
 DEFAULT_CONFIG_LOCATION="$HOME/.config/konaste"
-##############################################################################################################################
-# for all you linux rhythm nerds out there, if you want to use this script to install other konaste games out there,
-# just uncomment the lines you want here. by default, the lines for beatmania IIDX INFINITAS will be uncommented, because
-# this script was initially created for it.
-# (do not delete DIR_TITLE and SIMPLE_NAME. they're important)
-# TODO: repurpose this script as a way to play konaste games other than iidx infinitas on linux
-##############################################################################################################################
-# -- beatmania IIDX INFINITAS --
+
+# These lines can be changed if you intend to install other Konaste games, such as SOUND VOLTEX.
+# Do keep in mind that this script can only manage one game.
+# See 'konaste.txt' to learn how.
 GAME_TITLE='beatmania IIDX INFINITAS'
 DIR_TITLE="${GAME_TITLE}"
 SIMPLE_NAME="infinitas"
@@ -31,64 +34,6 @@ INSTALLER_LINK="https://d1rc4pwxnc0pe0.cloudfront.net/v2/installer/infinitas_ins
 LAUNCH_PAGE="https://p.eagate.573.jp/game/infinitas/2/api/login/login.html"
 LAUNCHER_NAME='bm2dx_launcher'
 URI='bm2dxinf'
-
-# -- SOUND VOLTEX EXCEED GEAR コナステ --
-#GAME_TITLE='SOUND VOLTEX EXCEED GEAR コナステ'
-#DIR_TITLE='SOUND VOLTEX EXCEED GEAR'
-#SIMPLE_NAME="sdvx-exceedgear"
-#INSTALLER_LINK="https://dks1q2aivwkd6.cloudfront.net/vi/installer/sdvx_installer_2022011800.msi"
-#LAUNCH_PAGE="https://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=sdvx"
-#LAUNCHER_NAME='launcher'
-#URI='konaste.sdvx'
-
-# -- DanceDanceRevolution GRANDPRIX --
-#GAME_TITLE='DanceDanceRevolution GRAND PRIX'
-#DIR_TITLE='DanceDanceRevolution'
-#SIMPLE_NAME="ddr-gp"
-#INSTALLER_LINK="https://d2el0dli9l0x2p.cloudfront.net/installer/ddr_installer_2022012601.msi"
-#LAUNCH_PAGE="http://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=ddr"
-#LAUNCHER_NAME='launcher'
-#URI='konaste.ddr'
-
-# -- GITADORA --
-#GAME_TITLE='GITADORA コナステ'
-#DIR_TITLE='GITADORA'
-#SIMPLE_NAME="gitadora"
-#INSTALLER_LINK="https://d1omkh45tn6edw.cloudfront.net/inst/GITADORA_installer.msi"
-#LAUNCH_PAGE="http://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=gitadora"
-#LAUNCHER_NAME='launcher'
-#URI='konaste.gitadora'
-
-# -- ノスタルジア (NOSTALGIA) --
-#GAME_TITLE='ノスタルジア'
-#DIR_TITLE='NOSTALGIA'
-#SIMPLE_NAME="nostalgia"
-#INSTALLER_LINK="https://d26kzmeiv4899f.cloudfront.net/installer/NOSTALGIA_installer.msi"
-#LAUNCH_PAGE="http://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=NOSTALGIA"
-#LAUNCHER_NAME='launcher'
-#URI='konaste.nostalgia'
-
-# -- pop'n music Lively --
-#GAME_TITLE='pop'n music Lively'
-#DIR_TITLE="${GAME_TITLE}"
-#SIMPLE_NAME="popn"
-#INSTALLER_LINK="https://d1twxdn5j8sbm3.cloudfront.net/installer/popn_installer_2021021801.msi"
-#LAUNCH_PAGE="https://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=popn-music"
-#LAUNCHER_NAME='launcher'
-#URI='konaste.popn-music'
-
-# this isn't a rhythm game at all, but it's still being added to this because of that one dude that made the guide for
-# getting this particular game working on linux. without it, i would've thought my dream of getting iidx infinitas
-# working properly on linux wouldn't come true. (it was because of the constant audio sample rate issues lmao)
-# -- ボンバーガール (BomberGirl) --
-#GAME_TITLE='ボンバーガール'
-#DIR_TITLE='BomberGirl'
-#SIMPLE_NAME="bombergirl"
-#INSTALLER_LINK="https://d1q1iflay6y5jj.cloudfront.net/Installer/2021122200_b37bc853/BomberGirl_Installer.msi"
-#LAUNCH_PAGE="https://p.eagate.573.jp/game/konasteapp/API/login/login.html?game_id=bomber-girl"
-#LAUNCHER_NAME='launcher'
-#URI='konaste.bomber-girl'
-##############################################################################################################################
 
 read -rd '' disclaimer <<EOM
 \n\033[1;91mWARNING:\033[0;1m READ BEFORE CONTINUING:\033[0m\n\n
@@ -277,12 +222,6 @@ EOF
 		echo "custom_wine=" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 	fi
 
-	#if [[ $useFlatpak ]]; then
-	#	echo "use_flatpak=true" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	#else
-	#	echo "use_flatpak=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	#fi
-
 	echo "use_winevd=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 	echo "use_gamemode=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 	echo -e "# gamescope doesn't play nicely with wine, so it's disabled.\n#use_gamescope=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
@@ -313,7 +252,6 @@ run_installer() {
 			VCR2010_LINK="https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe"
 			DXVK_LINK="https://github.com/doitsujin/dxvk/releases/download/v2.4/dxvk-2.4.tar.gz"
 			f=$(locate_files; echo -n $?)
-			echo $f
 			if [[ $f -eq 10 ]]; then
 				log "The installer has detected an existing version of ${GAME_TITLE} within this prefix. Setup cannot continue." err
 				exit 2
@@ -506,7 +444,6 @@ run_launcher() {
 		exec env TERM='dumb' xdg-open "${LAUNCH_PAGE}"
 	else
 		# let's get going
-		log "Using login token $LOGIN_TOKEN"
 		[[ -n $paLatency ]] && export PULSE_LATENCY_MSEC=$paLatency
 		export PULSE_SINK='konaste'
 
@@ -521,7 +458,6 @@ run_launcher() {
 
 		# launch the game
 		${WINESERVER[@]} -p2 # start wineserver
-		log "Executing $(echo -n ${LAUNCH_PARAMS[@]} $LAUNCHER_EXECUTABLE $LOGIN_TOKEN)"
 		${LAUNCH_PARAMS[@]} "$LAUNCHER_EXECUTABLE" "$LOGIN_TOKEN" # launch the game
 		log "${LAUNCHER_NAME}.exe process terminated. Waiting for Wineserver process to end.."
 		${WINESERVER[@]} -w # wait for winserver to terminate
@@ -544,10 +480,6 @@ main() {
 			if [[ -f "${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf" && -r "${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf" ]]; then
 				log "Found configuration file at ${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf"
  				source "${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf"
-
- 				#if [[ $use_flatpak && $use_flatpak == 'true' ]]; then
-				#	declare -gr useFlatpak=true 2>/dev/null
-				#fi
 
 				if [[ -n $custom_wine ]]; then
 					declare -gr customWineDir="${custom_wine}"
@@ -626,65 +558,36 @@ main() {
 
 	set_winevars() {
 		[[ $useVerbose ]] && log "Setting Wine variables..."
-		#if [[ $useFlatpak ]]; then
-		#	if [[ $(which flatpak 2>/dev/null) ]]; then
-		#		declare -gr WINEBUILD_DIR="$(cd -- $(dirname -- $(which flatpak))/.. && pwd)" 2>/dev/null
-		#		declare -ag FLATPAK_EXTRA_ARGS=()
-		#		if [[ -n $(flatpak list --user --app --columns=application | grep -w 'org.winehq.Wine') ]]; then
-		#			log "Found Wine (Flatpak) in user profile"
-		#			FLATPAK_EXTRA_ARGS+=( '--user' )
-		#		elif [[ -n $(flatpak list --system --app --columns=application | grep -w 'org.winehq.Wine') ]]; then
-		#			log "Found Wine (Flatpak) in system profile"
-		#			FLATPAK_EXTRA_ARGS+=( '--system' )
-		#		else
-		#			log "Wine (Flatpak) has not been installed to your system. Assuming you have the flathub repository added, you can install Wine by running the following command:\n  \033[1mflatpak install org.winehq.Wine\033[39m" err
-		#			exit 2
-		#		fi
-		#
-		#		# i really, REALLY wish flatpak would be normal
-		#		FLATPAK_EXTRA_ARGS+=( --env=WINEPREFIX="${prefixLocation}" --filesystem="${prefixLocation}" --env=WINEDEBUG='fixme-all' --env=DXVK_LOG_LEVEL='error' --env=DXVK_FRAME_RATE=120 )
-		#		declare -gr WINE=( "${WINEBUILD_DIR}/bin/flatpak run" "${FLATPAK_EXTRA_ARGS[@]}" --env=WINEDLLOVERRIDES='mscoree;mshtml=d' --command=wine org.winehq.Wine ) 2>/dev/null
-		#		declare -gr WINE_NOEXPLORER=( "${WINEBUILD_DIR}/bin/flatpak run" "${FLATPAK_EXTRA_ARGS[@]}" --env=WINEDLLOVERRIDES='mscoree;mshtml=d;explorer.exe=d' --command=wine org.winehq.Wine ) 2>/dev/null
-		#		declare -gr WINEBOOT=( "${WINEBUILD_DIR}/bin/flatpak run" "${FLATPAK_EXTRA_ARGS[@]}" --command=wineboot org.winehq.Wine ) 2>/dev/null
-		#		declare -gr WINEPATH=( "${WINEBUILD_DIR}/bin/flatpak run" "${FLATPAK_EXTRA_ARGS[@]}" --command=winepath org.winehq.Wine ) 2>/dev/null
-		#		declare -gr WINESERVER=( "${WINEBUILD_DIR}/bin/flatpak run" "${FLATPAK_EXTRA_ARGS[@]}" --command=wineserver org.winehq.Wine ) 2>/dev/null
-		#		log "Using Flatpak build of Wine"
-		#	else
-		#		log "Flatpak was not found on your system. Please install it from your distribution's package manager." err
-		#		exit 1
-		#	fi
-		#else
-			# check to see if there's a custom build
-			if [[ -n $customWineDir && $customWineDir != '/usr' && $customWineDir != '/' ]]; then
-				[[ ! -e "${customWineDir}" ]] && log "Couldn't locate custom Wine build directory at ${customWineDir}" err && exit 2
-				[[ ! -d "${customWineDir}" ]] && log "Custom Wine build specified is not a directory" err && exit 2
-				[[ ! -d "${customWineDir}/bin" ]] && log "Couldn't locate ${customWineDir}/bin" err && exit 2
-				[[ ! -e "${customWineDir}/bin/wine" ]] && "Couldn't locate ${customWineDir}/bin/wine" err && exit 2
-				[[ ! -x "${customWineDir}/bin/wine" ]] && "Wine executable in ${customWineDir}/bin exists, but is not executable." err && exit 2
-				log "Using custom Wine build ($(basename -- ${customWineDir}); ${customWineDir})..."
-				declare -gr WINEBUILD_DIR="${customWineDir}" 2>/dev/null
+		# check to see if there's a custom build
+		if [[ -n $customWineDir && $customWineDir != '/usr' && $customWineDir != '/' ]]; then
+			[[ ! -e "${customWineDir}" ]] && log "Couldn't locate custom Wine build directory at ${customWineDir}" err && exit 2
+			[[ ! -d "${customWineDir}" ]] && log "Custom Wine build specified is not a directory" err && exit 2
+			[[ ! -d "${customWineDir}/bin" ]] && log "Couldn't locate ${customWineDir}/bin" err && exit 2
+			[[ ! -e "${customWineDir}/bin/wine" ]] && "Couldn't locate ${customWineDir}/bin/wine" err && exit 2
+			[[ ! -x "${customWineDir}/bin/wine" ]] && "Wine executable in ${customWineDir}/bin exists, but is not executable." err && exit 2
+			log "Using custom Wine build ($(basename -- ${customWineDir}); ${customWineDir})..."
+			declare -gr WINEBUILD_DIR="${customWineDir}" 2>/dev/null
+		else
+			if [[ $(which wine 2>/dev/null) ]]; then
+				log "Using native build of Wine ($(which wine))"
+				declare -gr WINEBUILD_DIR="$(cd -- $(dirname -- $(which wine))/.. && pwd)" 2>/dev/null
 			else
-				if [[ $(which wine 2>/dev/null) ]]; then
-					log "Using native build of Wine ($(which wine))"
-					declare -gr WINEBUILD_DIR="$(cd -- $(dirname -- $(which wine))/.. && pwd)" 2>/dev/null
-				else
-					log "Wine was found on your system." err
-				fi
+				log "Wine was found on your system." err
 			fi
+		fi
 
-			# set exports because we're not using flatpak
-			export WINEPREFIX="${prefixLocation}"
-			export WINEDLLOVERRIDES="mscoree;mshtml=d"
-			export WINEDEBUG="fixme-all"
-			export DXVK_LOG_LEVEL='error'
-			export DXVK_FRAME_RATE=120
-			export DXVK_CONFIG="d3d9.maxFrameRate = 120; d3d9.syncInterval = 1"
+		export WINEPREFIX="${prefixLocation}"
+		export WINEDLLOVERRIDES="mscoree;mshtml=d"
+		export WINEDEBUG="fixme-all"
+		export DXVK_LOG_LEVEL='error'
+		export DXVK_FRAME_RATE=120
+		export DXVK_CONFIG="d3d9.maxFrameRate = 120; d3d9.syncInterval = 1"
 
-			declare -gr WINE="${WINEBUILD_DIR}/bin/wine"
-			declare -gr WINE_NOEXPLORER="env WINEDLLOVERRIDES=${WINEDLLOVERRIDES};explorer.exe=d ${WINE}"
-			declare -gr WINEBOOT="${WINEBUILD_DIR}/bin/wineboot"
-			declare -gr WINEPATH="${WINEBUILD_DIR}/bin/winepath"
-			declare -gr WINESERVER="${WINEBUILD_DIR}/bin/wineserver"
+		declare -gr WINE="${WINEBUILD_DIR}/bin/wine"
+		declare -gr WINE_NOEXPLORER="env WINEDLLOVERRIDES=${WINEDLLOVERRIDES};explorer.exe=d ${WINE}"
+		declare -gr WINEBOOT="${WINEBUILD_DIR}/bin/wineboot"
+		declare -gr WINEPATH="${WINEBUILD_DIR}/bin/winepath"
+		declare -gr WINESERVER="${WINEBUILD_DIR}/bin/wineserver"
 		#fi
 
 		# check wine version
@@ -750,7 +653,6 @@ main() {
 		fi
 	
 		# icon creation
-		# TODO: find a simpler way of creating icons
 		if [[ $cmd -eq 3 || $cmd -eq 1 ]]; then
 			if [[ $(which magick 2>/dev/null) ]]; then
 				log "Using magick ($(which magick)) for creating icons..."
@@ -765,11 +667,9 @@ main() {
 		[[ $useVerbose ]] && log "Setting gameplay variables..."
 		[[ ! $(which kdialog 2>/dev/null) ]] && log "Unable to find executable for \033[1mkdialog\033[0m." err && exit 5
 		[[ ! $(which pw-loopback 2>/dev/null) ]] && log "Unable to find executable for \033[1mpw-loopback\033[0m." err && exit 6
-		[[ ! $(which notify-send 2>/dev/null) ]] && log "Unable to find executable for \033[1mnotify-send\033[0m." err && exit 7
 
 		declare -gr KDIALOG="$(which kdialog)"
 		declare -gr PW_LOOPBACK="$(which pw-loopback)"
-		declare -gr NOTIFYSEND="$(which pw-loopback)"
 		declare -ag LAUNCH_PARAMS=()
 
 		[[ $useGM && $useGM == 'true' ]] && LAUNCH_PARAMS+=( "$(which gamemoderun)" )
@@ -801,20 +701,12 @@ if [[ $# -gt 0 ]]; then
 				verbose)
 					declare -g useVerbose=true 2>/dev/null
 					;;
-				flatpak)
-					log "Flatpak is not supported." err
-					exit 1
-					#[[ -n $customWineDir ]] && log "Argument --flatpak cannot be used with --winebuild" err && exit 1
-					#declare -g useFlatpak=true 2>/dev/null
-					;;
 				prefix|prefix=*)
 					[[ -z "${arg}" ]] && log "No custom Wine build directory specified." err && exit 1
-					[[ -n $useFlatpak ]] && log "Using a custom prefix location with Flatpak will lead to issues!" err && exit 1
 					[[ "${arg:0:1}" == '~' ]] && arg="$HOME${arg:1}"
 					declare -g prefixLocation="${arg}" 2>/dev/null
 					;;
 				winebuild|winebuild=*)
-					[[ -n $useFlatpak ]] && echo -e log "Argument --winebuild cannot be used with --flatpak" err && exit 1
 					[[ -z "${arg}" ]] && log "No custom Wine build directory specified." err && exit 1
 					[[ "${arg:0:1}" == '~' ]] && arg="$HOME${arg:1}"
 					declare -g customWineDir="${arg}" 2>/dev/null
