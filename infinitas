@@ -16,9 +16,9 @@
 
 # TODO:
 #	- repurpose this script for playing other konaste games(?)
-#	- find a simpler way for generating icons (i don't know if i can redistribute them)
 #	- add localized strings for the japanese/korean bros
 #	- graphical installer
+#	- flatpak support(?)
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 DEFAULT_PREFIX_LOCATION="$HOME/.local/share/konaste"
@@ -111,16 +111,10 @@ ynPrompt() {
 locate_files() {
 	[[ ! -e "${prefixLocation}" ]] && return 1
 	[[ ! -f "${prefixLocation}/system.reg" ]] && return 2
-		
-	#if [[ $useFlatpak ]]; then
-	#	instDir="${prefixLocation}/dosdevices/c:/Games/${DIR_TITLE}"
-	#	resdir="${prefixLocation}/dosdevices/c:/Games/${DIR_TITLE}/Resource"
-	#	launchexe="${prefixLocation}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}.exe"
-	#else
-		instDir="$(${WINEPATH[@]} -u "${INSTALL_DIR}" 2>/dev/null)"
-		resdir="$(${WINEPATH[@]} -u "${RESOURCE_DIR}" 2>/dev/null)"
-		launchexe="$(${WINEPATH[@]} -u "${LAUNCHER_EXECUTABLE}" 2>/dev/null)"
-	#fi
+
+	instDir="$(${WINEPATH[@]} -u "${INSTALL_DIR}" 2>/dev/null)"
+	resdir="$(${WINEPATH[@]} -u "${RESOURCE_DIR}" 2>/dev/null)"
+	launchexe="$(${WINEPATH[@]} -u "${LAUNCHER_EXECUTABLE}" 2>/dev/null)"
 
 	[[ ! -d "${instDir}" ]] && return 3
 	[[ ! -d "${resdir}" ]] && return 4
@@ -225,7 +219,7 @@ EOF
 	echo "use_winevd=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 	echo "use_gamemode=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 	echo -e "# gamescope doesn't play nicely with wine, so it's disabled.\n#use_gamescope=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	echo "#pa_latency=40" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+	echo -e "# uncomment if you're having issues with crackily/DistorteD audio.\n# it's recommended to keep this value above 40ms\n# pa_latency=40" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 	echo -e "# for any extra environment variables you want to use, add them here\nenv_vars=()" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
 
 	log "Wrote configuration file to $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf" ok
@@ -256,7 +250,7 @@ run_installer() {
 				log "The installer has detected an existing version of ${GAME_TITLE} within this prefix. Setup cannot continue." err
 				exit 2
 			fi
-			
+
 			sleep 2
 			echo -e $disclaimer
 			ynPrompt "Do you agree to these terms?"
@@ -438,7 +432,7 @@ run_launcher() {
 		$KDIALOG --title "Maintenance Notice" --error "The e-amusement Cloud servers are currently down for maintenance.\nPlease wait until $approx_time and try again."
 		exit 20
 	fi
-	
+
 	if [[ -z "$LOGIN_TOKEN" ]]; then
 		log "No login token was given. Opening launch page in a web browser..." err
 		exec env TERM='dumb' xdg-open "${LAUNCH_PAGE}"
@@ -550,7 +544,6 @@ main() {
 			fi
 
 			declare -gr useVerbose=$useVerbose 2>/dev/null
-			#declare -gr useFlatpak=$useFlatpak 2>/dev/null
 			declare -gr noDXVK=$noDXVK 2>/dev/null
 			declare -gr customWineDir="${customWineDir}" 2>/dev/null
 		fi
@@ -616,10 +609,10 @@ main() {
 
 		return 0
 	}
-		
+
 	set_installervars() {
 		[[ $useVerbose ]] && log "Setting installation variables..."
-	
+
 		if [[ $cmd -eq 1 ]]; then
 			# check for dependencies
 			if [[ ! $cliDownloader ]]; then
@@ -642,7 +635,7 @@ main() {
 					declare -gr DOWNLOADER="$(which ${cliDownloader})"
 				fi
 			fi
-	
+
 			if [[ $(which msiextract 2>/dev/null) ]]; then
 				log "Using msiextract ($(which msiextract)) for extracting the ${GAME_TITLE} installer..."
 				declare -gr MSIEXTRACT="$(which msiextract)"
@@ -651,14 +644,16 @@ main() {
 				exit 2
 			fi
 		fi
-	
+
 		# icon creation
 		if [[ $cmd -eq 3 || $cmd -eq 1 ]]; then
 			if [[ $(which magick 2>/dev/null) ]]; then
-				log "Using magick ($(which magick)) for creating icons..."
 				declare -gr MAGICK="$(which magick)"
+			elif [[ $(which convert 2>/dev/null) ]]; then
+				# some distros still use 'convert' for imagemagick operations instead of 'magick'
+				declare -gr MAGICK="$(which convert)"
 			else
-				log "Could not find executable for magick. You will not be able to create icons for ${GAME_TITLE}" warn
+				log "Could not find executable for imagemagick. You will not be able to create icons for ${GAME_TITLE}" warn
 			fi
 		fi
 	}
@@ -692,45 +687,53 @@ main() {
 	return $?
 }
 
-
 if [[ $# -gt 0 ]]; then
-	while [[ $# -gt 0 ]]; do
-		if [[ "${1:0:2}" == '--' ]]; then
-			arg="${1##*=}"
-			case "${1:2}" in
-				verbose)
-					declare -g useVerbose=true 2>/dev/null
-					;;
-				prefix|prefix=*)
-					[[ -z "${arg}" ]] && log "No custom Wine build directory specified." err && exit 1
-					[[ "${arg:0:1}" == '~' ]] && arg="$HOME${arg:1}"
-					declare -g prefixLocation="${arg}" 2>/dev/null
-					;;
-				winebuild|winebuild=*)
-					[[ -z "${arg}" ]] && log "No custom Wine build directory specified." err && exit 1
-					[[ "${arg:0:1}" == '~' ]] && arg="$HOME${arg:1}"
-					declare -g customWineDir="${arg}" 2>/dev/null
-					;;
-				use-downloader|use-downloader=*)
-					[[ -z "${arg}" ]] && log "No CLI download utility specified." err && exit 1
-					if [[ "${arg}" == 'curl' || "${arg}" == 'wget' ]]; then
-						declare -g cliDownloader="${arg}" 2>/dev/null
-					else
-						log "Unknown CLI download utility \033[1m${arg}\033[0m" err
+	if [[ "$1" =~ "${URI}://" ]]; then
+		[[ $TERM != 'dumb' ]] && log "Avoid passing login tokens directly to this script." warn
+		log "Launching ${GAME_TITLE}..."
+		declare -gr LOGIN_TOKEN="$1" 2>/dev/null
+		shift
+		if [[ $# -gt 0 ]]; then
+			log "Ignoring $# extra argument(s)" warn
+		fi
+	else
+		while [[ $# -gt 0 ]]; do
+			if [[ "${1:0:2}" == '--' ]]; then
+				arg="${1##*=}"
+				case "${1:2}" in
+					verbose)
+						declare -g useVerbose=true 2>/dev/null
+						;;
+					prefix|prefix=*)
+						[[ -z "${arg}" ]] && log "No custom Wine build directory specified." err && exit 1
+						[[ "${arg:0:1}" == '~' ]] && arg="$HOME${arg:1}"
+						declare -g prefixLocation="${arg}" 2>/dev/null
+						;;
+					winebuild|winebuild=*)
+						[[ -z "${arg}" ]] && log "No custom Wine build directory specified." err && exit 1
+						[[ "${arg:0:1}" == '~' ]] && arg="$HOME${arg:1}"
+						declare -g customWineDir="${arg}" 2>/dev/null
+						;;
+					use-downloader|use-downloader=*)
+						[[ -z "${arg}" ]] && log "No CLI download utility specified." err && exit 1
+						if [[ "${arg}" == 'curl' || "${arg}" == 'wget' ]]; then
+							declare -g cliDownloader="${arg}" 2>/dev/null
+						else
+							log "Unknown CLI download utility \033[1m${arg}\033[0m" err
+							exit 1
+						fi
+						;;
+					'no-dxvk')
+						declare -g noDXVK=true 2>/dev/null
+						;;
+					*)
+						log "Unknown argument $1. Type \033[39m$(basename -- $0) help for a list of usable arguments" err
 						exit 1
-					fi
-					;;
-				'no-dxvk')
-					declare -g noDXVK=true 2>/dev/null
-					;;
-				*)
-					log "Unknown argument $1. Type \033[39m$(basename -- $0) help for a list of usable arguments" err
-					exit 1
-					;;
-			esac
-		else
-			case "$1" in
-				help)
+						;;
+				esac
+			else
+				case "$1" in
+					help)
 cat <<EOM
 
 Infinitas for Linux install script by Mizzt (mizztgc)
@@ -757,38 +760,33 @@ Post-install commands:
   fix-registry: Fixes the registry keys in the prefix to help the game run
 
 EOM
-						exit 0
-					;;
-				install)
-					declare -gr cmd=1 2>/dev/null
-					;;
-				uninstall)
-					declare -gr cmd=2 2>/dev/null
-					;;
-				'create-launcher')
-					declare -gr cmd=3 2>/dev/null
-					;;
-				'create-icons')
-					declare -gr cmd=4 2>/dev/null
-					;;
-				'fix-registry')
-					declare -gr cmd=5 2>/dev/null
-					;;
-				"${URI}"://*)
-					[[ $TERM != 'dumb' ]] && log "Avoid passing launch tokens directly to this script." warn
-					declare -gr LOGIN_TOKEN="$1" 2>/dev/null
-					unset useVerbose useFlatpak customWineDir prefixLocation cliDownloader noDXVK 2>/dev/null
-					break
-					;;
-				*)
-					log "Unknown command $1. Type \033[39m$(basename -- $0) help for a list of usable arguments" err
-					exit 1
-					;;
-			esac
-		fi
+							exit 0
+						;;
+					install)
+						declare -gr cmd=1 2>/dev/null
+						;;
+					uninstall)
+						declare -gr cmd=2 2>/dev/null
+						;;
+					'create-launcher')
+						declare -gr cmd=3 2>/dev/null
+						;;
+					'create-icons')
+						declare -gr cmd=4 2>/dev/null
+						;;
+					'fix-registry')
+						declare -gr cmd=5 2>/dev/null
+						;;
+					*)
+						log "Unknown command $1. Type \033[39m$(basename -- $0) help for a list of usable arguments" err
+						exit 1
+						;;
+				esac
+			fi
 
-		shift
-	done
+			shift
+		done
+	fi
 fi
 
 main; exit $?
