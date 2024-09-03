@@ -171,7 +171,7 @@ cat > $appsFolder/"${SIMPLE_NAME}".desktop <<EOF
 [Desktop Entry]
 Name=${GAME_TITLE}
 Categories=Application;Game;
-MimeType=x-scheme-handler/bm2dxinf
+MimeType=x-scheme-handler/${URI}
 Icon=${SIMPLE_NAME}
 Description=Play ${GAME_TITLE} on Linux
 Type=Application
