@@ -1,3 +1,5 @@
+i'm burned out from all this programming, so i'm probably not going to update this script as much.
+
 # Infinitas for Linux
 An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash
 
