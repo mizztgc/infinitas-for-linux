@@ -48,7 +48,7 @@ LAUNCHER_NAME='launcher'
 URI='konaste.nostalgia'
 
 [pop'n music Lively]
-GAME_TITLE='pop'n music Lively'
+GAME_TITLE="pop'n music Lively"
 DIR_TITLE="${GAME_TITLE}"
 SIMPLE_NAME="popn"
 INSTALLER_LINK="https://d1twxdn5j8sbm3.cloudfront.net/installer/popn_installer_2021021801.msi"
