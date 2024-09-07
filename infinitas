@@ -281,7 +281,8 @@ set_vars() {
 				PRELAUNCH_ARGS+=( "$GAMESCOPE" -w 1920 -h 1080 -r 120 --framerate-limit 120 -f -- )
 				WINE_LAUNCH_ARGS+=( explorer '/desktop=infinitas,1920x1080' )
 				$KDIALOG --title "${GAME_TITLE} - GAMESCOPE WARNING" \
-					--sorry "You have enabled support for Gamescope. Please keep in mind that Gamescope does <strong><em>NOT</em></strong> play well with Wine, and may require you to manually kill once you are done playing.<br>Wine's Virtual Desktop feature will also be enabled."
+					--sorry "You have enabled support for Gamescope. Please keep in mind that Gamescope does <strong><em>NOT</em></strong> play well with Wine, and may require you to manually kill once you are done playing.<br>Wine's Virtual Desktop feature will also be enabled." \
+					--dontagain "$HOME/.config/konaste/ignore.conf":gamescopeWarning
 			else
 				log warn "use_gamescope is set to true, but a binary for gamescope couldn't be found on your system."
 			fi
