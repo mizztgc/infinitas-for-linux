@@ -278,7 +278,7 @@ set_vars() {
 		# Use Gamescope (NOT RECOMMENDED)
 		if [[ -n $use_gamescope && $use_gamescope == 'true' ]]; then
 			if [[ -n $GAMESCOPE ]]; then
-				PRELAUNCH_ARGS+=( "$GAMESCOPE" -h 1920 -w 1080 -r 120 --framerate-limit 120 -f -- )
+				PRELAUNCH_ARGS+=( "$GAMESCOPE" -w 1920 -h 1080 -r 120 --framerate-limit 120 -f -- )
 				WINE_LAUNCH_ARGS+=( explorer '/desktop=infinitas,1920x1080' )
 				$KDIALOG --title "${GAME_TITLE} - GAMESCOPE WARNING" \
 					--sorry "You have enabled support for Gamescope. Please keep in mind that Gamescope does <strong><em>NOT</em></strong> play well with Wine, and may require you to manually kill once you are done playing.<br>Wine's Virtual Desktop feature will also be enabled."
