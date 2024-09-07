@@ -96,6 +96,7 @@ set_vars() {
 	declare -gr PW_LOOPBACK="$(command -v pw-loopback)"
 	declare -gr KDIALOG="$(command -v kdialog)"
 	declare -gr GAMEMODE="$(command -v gamemoderun)"
+	declare -gr GAMESCOPE="$(command -v gamescope)"
 
 	[[ -z $KDIALOG ]] && log - "Unable to locate binary for \033[1mkdialog\033[22m. Please install it from your distribution's package manager." && exit 5
 	[[ -z $PW_LOOPBACK ]] && {
@@ -282,7 +283,7 @@ set_vars() {
 				$KDIALOG --title "${GAME_TITLE} - GAMESCOPE WARNING" \
 					--sorry "You have enabled support for Gamescope. Please keep in mind that Gamescope does <strong><em>NOT</em></strong> play well with Wine, and may require you to manually kill once you are done playing.<br>Wine's Virtual Desktop feature will also be enabled."
 			else
-				log warn "use_gamescode is set to true, but a binary for gamescope couldn't be found on your system."
+				log warn "use_gamescope is set to true, but a binary for gamescope couldn't be found on your system."
 			fi
 		fi
 
