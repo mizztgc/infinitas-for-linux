@@ -1,7 +1,11 @@
-# Infinitas for Linux
+# Infinitas for Linux (TESTING)
 An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash
 
 Be sure to check out the [wiki](https://github.com/mizztgc/infinitas-for-linux/wiki) for some helpful information
+
+## WARNING:
+
+This script currently does _**NOT**_ have the ability to install beatmania IIDX INFINITAS. This script is only meant for starting the game, and will assume you already have the game installed. If you haven't installed beatmania IIDX INFINITAS yet, your best bet is to use the script in the main branch, and then replace it with this script once it's done.
 
 ## DISCLAIMER:
 
@@ -31,18 +35,3 @@ This script requires the following dependencies:
 * **wget** (game install only; for downloading the installer)
 * **tar** (game install only; for extracting the files for DXVK)
 * **imagemagick** (game install only; for generating icons)
-
-## HOW TO INSTALL:
-```
-git clone https://github.com/mizztgc/infinitas-for-linux/
-cd infinitas-for-linux/
-chmod +x infinitas
-./infinitas install
-```
-
-You can also specify the following options:
-* `--prefix=` Set the location for the Wineprefix that will hold all game files
-* `--winebuild=` Use a custom Wine build for not only playing IIDX INFINITAS, but also use it to install the game.
-* `--no-dxvk` Do not install DXVK to the Wineprefix. While IIDX INFINITAS can run perfectly fine without it, I'd still recommend installing it.
-
-**WARNING:** The Flatpak build of Wine is _**NOT**_ supported!
