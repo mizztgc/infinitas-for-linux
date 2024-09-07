@@ -48,6 +48,8 @@ log() {
 	return 0
 }
 
+[[ $UID -eq 0 ]] && log warn "Avoid running this script as the root user."
+
 [[ -n $container && $container == 'flatpak' ]] && {
 	log err "Do NOT run this script directly through a Flatpak container."
 	exit 126
@@ -67,8 +69,8 @@ export DXVK_LOG_LEVEL='error'
 "${WINESERVER[@]}" -w
 exit \$?
 EOF
-	chmod a+x "/tmp/${SIMPLE_NAME}.sh"
-	echo -n "/tmp/${SIMPLE_NAME}.sh" # This won't be outputted to the terminal.
+	chmod a+x "/tmp/${SIMPLE_NAME}.sh"	# Make the script executable
+	echo -n "/tmp/${SIMPLE_NAME}.sh" 	# Output the script location to a variable
 }
 
 locate_files() {
@@ -81,11 +83,6 @@ locate_files() {
 	[[ ! -d "${_PREFIX[@]}/dosdevices/c:/Games/${DIR_TITLE}/Resource" ]] && return 5
 	[[ ! -f "${_PREFIX[@]}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}.exe" ]] && return 6
 
-# 	if [[ $_useFlatpak ]]; then
-# 		declare -gr LAUNCHER_EXECUTABLE="$($FLATPAK run "${FLATPAK_EXTRA_ARGS[@]}" --command=/bin/bash org.winehq.Wine -c "/app/bin/winepath -w "${_PREFIX[@]}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}.exe" ")"
-# 	else
-# 		declare -gr LAUNCHER_EXECUTABLE="$(${WINEPATH[@]} -w "${_PREFIX[@]}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}.exe")"
-# 	fi
 	declare -gr LAUNCHER_EXECUTABLE="C:\\\\Games\\\\${DIR_TITLE}\\\\launcher\\\\modules\\\\${LAUNCHER_NAME}.exe"
 	return 0
 }
@@ -124,6 +121,7 @@ set_vars() {
 		elif [[ -n $($FLATPAK list --system --app --columns=application | grep -w 'org.winehq.Wine') ]]; then
 			FLATPAK_EXTRA_ARGS+=( '--system' )
 		else
+			# Wine isn't installed. Oh well, delete this array.
 			unset FLATPAK_EXTRA_ARGS
 			return 2
 		fi
@@ -275,14 +273,14 @@ set_vars() {
 			fi
 		fi
 
-		# Use Gamescope (NOT RECOMMENDED)
+		# Use Gamescope
 		if [[ -n $use_gamescope && $use_gamescope == 'true' ]]; then
 			if [[ -n $GAMESCOPE ]]; then
 				PRELAUNCH_ARGS+=( "$GAMESCOPE" -w 1920 -h 1080 -r 120 --framerate-limit 120 -f -- )
-				WINE_LAUNCH_ARGS+=( explorer '/desktop=infinitas,1920x1080' )
-				$KDIALOG --title "${GAME_TITLE} - GAMESCOPE WARNING" \
-					--sorry "You have enabled support for Gamescope. Please keep in mind that Gamescope does <strong><em>NOT</em></strong> play well with Wine, and may require you to manually kill once you are done playing.<br>Wine's Virtual Desktop feature will also be enabled." \
-					--dontagain "$HOME/.config/konaste/ignore.conf":gamescopeWarning
+				#WINE_LAUNCH_ARGS+=( explorer '/desktop=infinitas,1920x1080' )
+				#$KDIALOG --title "${GAME_TITLE} - GAMESCOPE WARNING" \
+				#	--sorry "You have enabled support for Gamescope. Please keep in mind that Gamescope does <strong><em>NOT</em></strong> play well with Wine, and may require you to manually kill once you are done playing.<br>Wine's Virtual Desktop feature will also be enabled." \
+				#	--dontagain "$HOME/.config/konaste/ignore.conf":gamescopeWarning
 			else
 				log warn "use_gamescope is set to true, but a binary for gamescope couldn't be found on your system."
 			fi
@@ -316,7 +314,7 @@ set_vars() {
 
 	wine_check; case $? in
 		0)	# Valid Wine build detected
-			[[ ! $_useFlatpak && $custom_wine ]] && {
+			[[ ! $_useFlatpak || $custom_wine ]] && {
 				log - "Setting WINE to ${WINE[@]}"
 				log - "Setting WINEPATH to ${WINEPATH[@]}"
 				log - "Setting WINESERVER to ${WINESERVER[@]}"
@@ -326,7 +324,7 @@ set_vars() {
 				1)
 					log err "Out of date Wine build detected"
 					$KDIALOG --title "${GAME_TITLE} - ERROR" \
-						--error "The specified Wine build directory is out of date.<br>This script requires a build of Wine <strong>9.0</strong> or later"
+						--error "This script requires a build of Wine <strong>9.0</strong> or later."
 					exit 22
 					;;
 				2)
@@ -382,6 +380,29 @@ set_vars() {
 	esac
 }
 
+# Terminate the script if it's being ran through gamescope
+if [[ $GAMESCOPE_WAYLAND_DISPLAY || $XDG_CURRENT_DESKTOP == 'gamescope' ]]; then
+	log err "This script should NOT be ran through a Gamescope session"
+	$KDIALOG --title "Gamescope Warning" \
+		--error "Do NOT run this script directly through a Gamescope session. If you intend on playing with Gamescope, please enable it within your configuration file."
+	killall -ABRT gamescope-wl
+	exit 134
+fi
+
+# The e-amusement Cloud servers always go down daily between 5:00am-7:00am JST for maintenance.
+# This is equivalent to 20:00-22:00 (8:00pm-10:00pm) UTC.
+# The error message shown in this function will tell you when maintenance will end in your time zone.
+if [[ $(date -u +%H) -ge 20 && $(date -u +%H) -lt 22 ]]; then
+	approx_time=$(printf '%(%l:%M%P %Z)T\n' "$(date +%s -u -d "22:00")")
+	if [[ "${approx_time:0:1}" == ' ' ]]; then
+		approx_time="${approx_time:1}"
+	fi
+	log err "The e-amusement Cloud servers are currently down for maintenance"
+	$KDIALOG --title "Maintenance Notice" \
+		--error "The e-amusement Cloud servers are currently down for maintenance.<br>Please wait until <strong>$approx_time</strong> and try again."
+	exit 255
+fi
+
 # Check for a login token
 if [[ $# -eq 1 && "$1" =~ "${URI}" ]]; then
 	[[ $TERM != 'dumb' ]] && log warn "Avoid passing login tokens directly to this script."
@@ -393,10 +414,11 @@ locate_files; case $? in
 	0)	# Found game
 		log - "Found ${GAME_TITLE} launcher"
 
-		# Open the launch page if no login token is provided.
+		# If LOGIN_TOKEN is an empty string, just open the launch page for the game.
+		# Don't ask me why they do this in a web browser instead of through the actual launcher.
 		if [[ -z "$LOGIN_TOKEN" ]]; then
 			log err "No login token was specified. Opening launch page..."
-			exec xdg-open "$LAUNCH_PAGE"
+			exec env TERM=dumb xdg-open "$LAUNCH_PAGE"
 		fi
 
 		# start PipeWire loopback device
@@ -420,7 +442,7 @@ locate_files; case $? in
 			"${PRELAUNCH_ARGS[@]}" bash -c "$tempScript" 2>/dev/null
 		fi
 
-		rm "$tempScript"
+		rm "$tempScript" # Delete the temporary script
 		log - "${GAME_TITLE} ended. Terminating loopback device..."
 		kill -15 $(jobs -p)
 
