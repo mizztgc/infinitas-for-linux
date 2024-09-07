@@ -47,4 +47,4 @@ You can also specify the following options:
 * `--winebuild=` Use a custom Wine build for not only playing IIDX INFINITAS, but also use it to install the game.
 * `--no-dxvk` Do not install DXVK to the Wineprefix. While IIDX INFINITAS can run perfectly fine without it, I'd still recommend installing it.
 
-**WARNING:** The Flatpak build of Wine is _**NOT**_ supported!
+**WARNING:** The Flatpak build of Wine is ~~_**NOT**_ supported!~~ will be supported in the future!
