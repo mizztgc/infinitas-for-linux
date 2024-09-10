@@ -243,6 +243,24 @@ create_keys() {
 run_installer() {
 	case $cmd in
 		1)
+			# let the ko/jp/cn bros know this script isn't translated
+			# these translations were done with google translate. they may not be accurate
+			# original string: "This script does not contain any <locale> localization. Unless you understand English, you may need to use a machine translator like Google Translate or DeepL to proceed with the installation."
+			case "${LANG}" in
+				ko*) # korean
+					log "이 스크립트에는 한국어 현지화가 포함되어 있지 않습니다. 영어를 이해하지 못하면 Google Translate 또는 DeepL과 같은 기계 번역기를 사용하여 설치를 진행해야 할 수 있습니다." warn
+					;;
+				ja*) # japanese
+					log "このスクリプトには日本語ローカライズは含まれていません。英語を理解していない場合は、インストールを続行するために Google Translate や DeepL などの機械翻訳を使用する必要がある場合があります。" warn
+					;;
+				zh_TW*) # traditional chinese
+					log "該腳本不包含任何中文本地化。除非您懂英語，否則您可能需要使用機器翻譯來繼續安裝。" warn
+					;;
+				zh_*) # simplified chinese
+					log "此脚本不包含任何中文本地化内容。除非您懂英语，否则可能需要使用机器翻译器才能继续安装。" warn
+					;;
+			esac
+
 			VCR2010_LINK="https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe"
 			DXVK_LINK="https://github.com/doitsujin/dxvk/releases/download/v2.4/dxvk-2.4.tar.gz"
 			f=$(locate_files; echo -n $?)
@@ -253,7 +271,7 @@ run_installer() {
 
 			sleep 2
 			echo -e $disclaimer
-			ynPrompt "Do you agree to these terms?"
+			ynPrompt "Proceed with installation?"
 			if [[ "$?" -ne 0 ]]; then
 				exit 1
 			fi
