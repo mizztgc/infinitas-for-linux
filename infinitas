@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
 
-
-
-# Kill if running in Flatpak
-[[ -n $container && $container == 'flatpak' ]] && {
-	echo "This script is not meant to be used with Flatpak."
-	exit 1
-}
-
 # Default variables
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
@@ -61,7 +53,7 @@ run_game() {
 	else
 		echo "DXVK directory was not found." 1>&2
 	fi
-	export WINEDLLOVERRIDES="mscoree;d3d9=b,n"
+	export WINEDLLOVERRIDES="mscoree"
 	export WINEDEBUG='fixme-all'
 
 	# The e-amusement Cloud servers always go down daily between 5:00am-7:00am JST for maintenance.
@@ -84,7 +76,7 @@ run_game() {
 		$KDIALOG \
 			--title "Wayland Warning" \
 			--sorry "You appear to be utilizing a Wayland session provided by $XDG_CURRENT_DESKTOP. Wayland has a glaring issue of only exposing your current refresh rate to applications, which in turn, causes ${GAME_TITLE} to fail the display initialization process. Before clicking 'OK', ensure your display's refresh rate is set to 60Hz (or 120Hz if supported)." \
-			--dontagain "${WINEPREFIX}/.kdialog_ignore" 2>/dev/null
+			--dontagain "${WINEPREFIX}/.kdialog_ignore:waylandWarning" 2>/dev/null
 	fi
 
 	# Start PipeWire loopback device
@@ -289,6 +281,7 @@ EOF
 	echo "Setting additional registry keys..."
 	$WINE reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' 2>/dev/null
 	$WINE reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
+	$WINE reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d9' /t 'REG_SZ' /d 'native,builtin' /f '/reg:64' 2>/dev/null
 
 	# Create launcher and mimetype
 	echo "Creating launcher and mimetype for ${GAME_TITLE}..."
