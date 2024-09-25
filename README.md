@@ -22,17 +22,14 @@ This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a
 This script requires the following dependencies:
 
 * **Web browser of your choice** (Firefox, Chrome, etc.)
-* **wine >=9.0** (required; this is a game for Windows after all)
+* **wine>=9.0** (required; this is a game for Windows after all)
 * **pipewire** (required; for sound)
 * **pipewire-pulse** (required; for sound)
-* **pulseaudio-utils** (required; for enabling the loopback device that is needed for audio to work)
-* **libnotify** (required; to show non-intrusive warnings related to configuration)
+  * Debian users may need to also install **pulseaudio-utils**
 * **xdg-utils** (required; to handle the `bm2dxinf://` URI)
-* **kdialog** (required; for showing error message boxes)
-* **msitools** (game install only; for extracting the files from the installer)
-* **wget**/**curl** (game install only; for downloading the installer)
-* **tar** (game install only; for extracting the files for DXVK)
-* **imagemagick** (game install only; for generating icons)
+* **kdialog** (required; for showing message boxes)
+* **icoutils** (game install only; for creating icons)
+* **wget** (game install only; for downloading the installer)
 
 ## HOW TO INSTALL:
 ```
@@ -41,8 +38,3 @@ cd infinitas-for-linux/
 chmod +x infinitas
 ./infinitas install
 ```
-
-You can also specify the following options:
-* `--prefix=` Set the location for the Wineprefix that will hold all game files
-* `--winebuild=` Use a custom Wine build for not only playing IIDX INFINITAS, but also use it to install the game.
-* `--no-dxvk` Do not install DXVK to the Wineprefix. While IIDX INFINITAS can run perfectly fine without it, I'd still recommend installing it.
