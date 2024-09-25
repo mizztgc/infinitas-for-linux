@@ -1,32 +1,17 @@
 #!/usr/bin/env bash
 
-# Infinitas for Linux script by Mizzt (mizztgc)
-# https://github.com/mizztgc/infinitas-for-linux/
 
-# DISCLAIMER:
-# This script is in no way affiliated with, endorsed, nor supported by KONAMI. In order to access the full game outside
-# of trial mode, you must be subscribed to the beatmania IIDX INFINITAS Basic Course. This script will NOT allow you to
-# gain access to things you aren't paying for, nor will the script developer assist you with such actions.
-#
-# Like most online games today, getting banned for playing the game on GNU/Linux (outside of what the developers
-# intended) is a possibility. The script developer is not to be held responsible, should you receive any bans from use of
-# this script.
-#
-# Play at your own risk.
 
-# TODO:
-#	- repurpose this script for playing other konaste games(?)
-#	- add localized strings for the japanese/korean bros
-#	- graphical installer
-#	- flatpak support(?)
+# Kill if running in Flatpak
+[[ -n $container && $container == 'flatpak' ]] && {
+	echo "This script is not meant to be used with Flatpak."
+	exit 1
+}
 
+# Default variables
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-DEFAULT_PREFIX_LOCATION="$HOME/.local/share/konaste"
-DEFAULT_CONFIG_LOCATION="$HOME/.config/konaste"
 
-# These lines can be changed if you intend to install other Konaste games, such as SOUND VOLTEX.
-# Do keep in mind that this script can only manage one game.
-# See 'konaste.txt' to learn how.
+# Game information
 GAME_TITLE='beatmania IIDX INFINITAS'
 DIR_TITLE="${GAME_TITLE}"
 SIMPLE_NAME="infinitas"
@@ -35,153 +20,113 @@ LAUNCH_PAGE="https://p.eagate.573.jp/game/infinitas/2/api/login/login.html"
 LAUNCHER_NAME='bm2dx_launcher'
 URI='bm2dxinf'
 
-read -rd '' disclaimer <<EOM
-\n\033[1;91mWARNING:\033[0;1m READ BEFORE CONTINUING:\033[0m\n\n
+[[ ! $(command -v wine) ]] && echo "This script requires wine" && exit 1
+[[ ! $(command -v kdialog) ]] && echo "This script requires kdialog" && exit 2
+[[ ! $(command -v pipewire) ]] && echo "This script requires pipewire" && exit 3
+[[ ! $(command -v pipewire-pulse) ]] && echo "This script requires pipewire-pulse" && exit 4
 
-This script is in no way affiliated with, endorsed, nor supported by KONAMI. In order to access the full game outside of trial mode, you must be subscribed to the ${GAME_TITLE} Basic Course. This script will NOT allow you to gain access to things you aren't paying for, nor will the script developer assist you with such actions.\n\n
-
-Like most online games today, getting banned for playing the game on GNU/Linux (outside of what the developers intended) is a possibility. The script developer is not to be held responsible, should you receive any bans from use of this script.\n\n
-
-\033[3mPlay at your own risk\033[0m.\n\n
-EOM
-
-log() {
-	[[ -z "$1" ]] && return 1
-	declare -Ia logOutput=()
-	[[ $TERM != 'dumb' ]] && case "$2" in
-		warn)
-			logOutput+=( "\033[1;93m->\033[39m WARNING:\033[0m" )
-			;;
-		err)
-			logOutput+=( "\033[1;91m->\033[39m ERROR:\033[0m" )
-			;;
-		ok)
-			logOutput+=( "\033[1;92m->\033[39m SUCCESS:\033[0m" )
-			;;
-		*)
-			logOutput+=( "\033[1;96m->\033[39m INFO:\033[0m" )
-			;;
-	esac
-	logOutput+=( "${1}\033[0m" )
-	echo -e "${logOutput[@]}"
-	return 0
-}
-
-ynPrompt() {
-	while true; do
-		pro="$1 ["
-		case $2 in
-			0)
-				pro+="Y/n] "
-				;;
-			1)
-				pro+="N/y] "
-				;;
-			*)
-				pro+="y/n] "
-				;;
-		esac
-
-		read -rp "$(printf "\033[1m$pro\033[0m")" choice
-		if [[ -z "$choice" ]]; then
-			case "$2" in
-				0)
-					choice='y'
-					;;
-				1)
-					choice='n'
-					;;
-			esac
-		fi
-
-		case $choice in
-			[Yy]|[Yy][Ee][Ss])
-				return 0
-				;;
-			[Nn]|[Nn][Oo])
-				return 1
-				;;
-			*)
-				log "Invalid response." err
-				;;
-		esac
-	done
-}
+KDIALOG="$(command -v kdialog)"
+ICOTOOL="$(command -v icotool)"
+PW_LOOPBACK="$(command -v pw-loopback)"
+WGET="$(command -v wget)"
+# custom wine support will be added later
+WINE="$(command -v wine)"
+WINEBOOT="$(command -v wineboot)"
+WINESERVER="$(command -v wineserver)"
 
 locate_files() {
-	[[ ! -e "${prefixLocation}" ]] && return 1
-	[[ ! -f "${prefixLocation}/system.reg" ]] && return 2
+	# TODO: Improve this.
+	[[ -n "$LAUNCHER_EXECUTABLE" ]] && return 0
 
-	instDir="$(${WINEPATH[@]} -u "${INSTALL_DIR}" 2>/dev/null)"
-	resdir="$(${WINEPATH[@]} -u "${RESOURCE_DIR}" 2>/dev/null)"
-	launchexe="$(${WINEPATH[@]} -u "${LAUNCHER_EXECUTABLE}" 2>/dev/null)"
+	[[ ! -e "${WINEPREFIX}" ]] && return 1
+	[[ ! -d "${WINEPREFIX}" ]] && return 2
+	[[ ! -f "${WINEPREFIX}/system.reg" ]] && return 3
+	[[ ! -f "${WINEPREFIX}/${SIMPLE_NAME}" ]] && return 4
+	[[ ! -d "${WINEPREFIX}/dosdevices/c:/Games/${DIR_TITLE}" ]] && return 5
+	[[ ! -d "${WINEPREFIX}/dosdevices/c:/Games/${DIR_TITLE}/Resource" ]] && return 6
+	[[ ! -f "${WINEPREFIX}/dosdevices/c:/Games/${DIR_TITLE}/launcher/modules/${LAUNCHER_NAME}.exe" ]] && return 7
 
-	[[ ! -d "${instDir}" ]] && return 3
-	[[ ! -d "${resdir}" ]] && return 4
-	[[ ! -f "${launchexe}" ]] && return 5
-
-	if [[ $cmd && $cmd -eq 1 ]]; then
-		return 10
-	fi
-
+	declare -gr LAUNCHER_EXECUTABLE="C:\\\\Games\\\\${DIR_TITLE}\\\\launcher\\\\modules\\\\${LAUNCHER_NAME}.exe"
 	return 0
 }
 
-create_icons() {
-	[[ -z $MAGICK ]] && log "imagemagick was not found on your system. Icons will not be created" warn && return 1
-	[[ $UID -ne 0 ]] &&	declare -I iconFolder="$HOME/.local/share/icons/hicolor"
-	[[ $UID -eq 0 ]] &&	declare -I iconFolder="/usr/share/icons/hicolor"
-	log "Creating icons..."
-	mkdir tmpIconDir
-	cd tmpIconDir
+# Game launch function
+run_game() {
+	# Use DXVK if found
+	if [[ -d /usr/share/dxvk ]]; then
+		echo "Located DXVK at /usr/share/dxvk"
+		export WINEDLLPATH="${WINEDLLPATH}:/usr/share/dxvk/x32:/usr/share/dxvk/x64"
+		export DXVK_LOG_LEVEL='error'
+		export DXVK_FRAME_RATE=120
+	else
+		echo "DXVK directory was not found." 1>&2
+	fi
+	export WINEDLLOVERRIDES="mscoree;d3d9=b,n"
+	export WINEDEBUG='fixme-all'
 
-	icon_location="$(find "${prefixLocation}/dosdevices/c:/Games" -type f -name "*.ico")"
-	$MAGICK "$icon_location" icon.png
-	if [[ $? -ne 0 ]]; then
-		log "Failed to create icons!" err
-		return 1
+	# The e-amusement Cloud servers always go down daily between 5:00am-7:00am JST for maintenance.
+	# This is equivalent to 20:00-22:00 (8:00pm-10:00pm) UTC.
+	# The error message shown in this function will tell you when maintenance will end in your time zone.
+	if [[ $(date -u +%H) -ge 20 && $(date -u +%H) -lt 22 ]]; then
+		approx_time=$(printf '%(%l:%M%P %Z)T\n' "$(date +%s -u -d "22:00")")
+		if [[ "${approx_time:0:1}" == ' ' ]]; then
+			approx_time="${approx_time:1}"
+		fi
+		$KDIALOG \
+			--title "Maintenance Notice" \
+			--error "The e-amusement Cloud servers are currently down for maintenance.<br>Please wait until <strong>$approx_time</strong> and try again." 2>/dev/null
+		exit 255
 	fi
 
-	for index in {0..4}; do
-		dimens=$(file icon-${index}.png | grep -Eo "[[:digit:]]+ *x *[[:digit:]]+")
-		dimens="${dimens% x*}"
-		dest="$iconFolder/${dimens}x${dimens}"
-		[[ ! -e "$dest" ]] && mkdir -p "$dest"
-		[[ ! -e "$dest/apps" ]] && mkdir -p "$dest/apps"
-		[[ ! -e "$dest/mimetypes" ]] && mkdir -p "$dest/mimetypes"
-		cp -f icon-${index}.png "$dest/apps/${SIMPLE_NAME}.png" 2>/dev/null
-		cp -f icon-${index}.png "$dest/mimetypes/x-scheme-handler-${URI}.png" 2>/dev/null
-	done
-	unset iconLocation dimens dest index
-	cd ..
-	rm -rf tmpIconDir
+	# Detect Wayland and warn the user
+	if [[ $XDG_SESSION_TYPE == 'wayland' ]]; then
+		echo "Wayland detected; expect issues" 1>&2
+		$KDIALOG \
+			--title "Wayland Warning" \
+			--sorry "You appear to be utilizing a Wayland session provided by $XDG_CURRENT_DESKTOP. Wayland has a glaring issue of only exposing your current refresh rate to applications, which in turn, causes ${GAME_TITLE} to fail the display initialization process. Before clicking 'OK', ensure your display's refresh rate is set to 60Hz (or 120Hz if supported)." \
+			--dontagain "${WINEPREFIX}/.kdialog_ignore" 2>/dev/null
+	fi
 
-	[[ $(which gtk-update-icon-cache 2>/dev/null) ]] && gtk-update-icon-cache
-	log "Created icons for ${GAME_TITLE}" ok
-	return 0
+	# Start PipeWire loopback device
+	echo "Starting PipeWire loopback device..."
+	$PW_LOOPBACK -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
+	export PULSE_SINK='konaste'
+	${WINESERVER} -p2
+	${WINE} start '/high' '/wait' "${LAUNCHER_EXECUTABLE}" "$LOGIN_TOKEN"
+	${WINESERVER} -w
+
+	sleep 1
+	kill -15 $(jobs -p)
+	# IIDX EMPRESS has a very goated credits song.
+	# don't @ me.
+	echo -e "\n\033[1;95mThank you for playing...\033[0m\n"
 }
 
-create_launcher() {
-	[[ $UID -ne 0 ]] &&	declare -I appsFolder="$HOME/.local/share/applications"
-	[[ $UID -ne 0 ]] &&	declare -I mimeFolder="$HOME/.local/share/mime"
-	[[ $UID -eq 0 ]] &&	declare -I appsFolder="/usr/share/applications"
-	[[ $UID -eq 0 ]] &&	declare -I mimeFolder="/usr/share/mime"
-	log "Creating launcher and mimetype for ${GAME_TITLE}..."
-cat > $appsFolder/"${SIMPLE_NAME}".desktop <<EOF
+# Installation function
+run_installer() {
+	[[ ! $(command -v kdialog) ]] && echo "This script requires kdialog for installation." && exit 4
+
+	create_launcher() {
+	if [[ -n $ICOTOOL ]]; then
+cat > "$HOME/.local/share/applications/${SIMPLE_NAME}.desktop" <<EOF
 [Desktop Entry]
 Name=${GAME_TITLE}
-Categories=Application;Game;
-MimeType=x-scheme-handler/${URI}
-Icon=${SIMPLE_NAME}
-Description=Play ${GAME_TITLE} on Linux
-Type=Application
+Categories=Game;
+GenericName=Rhythm Game
+Icon=$SIMPLE_NAME
+Exec=xdg-open $LAUNCH_PAGE
 EOF
-
-	[[ $UID -eq 0 ]] && echo "Exec=$(basename -- $0) %u" >> $appsFolder/"${SIMPLE_NAME}.desktop"
-	[[ $UID -ne 0 ]] && echo "Exec=$SCRIPT_DIR/$(basename -- $0) %u" >> $appsFolder/"${SIMPLE_NAME}.desktop"
-
-	[[ ! -e $mimeFolder/packages ]] && mkdir "$mimeFolder/packages" 2>/dev/null
-cat > "$mimeFolder/packages/x-scheme-handler-${URI}.xml" <<EOF
+	fi
+cat > "$HOME/.local/share/applications/${SIMPLE_NAME}-launcher.desktop" <<EOF
+[Desktop Entry]
+Name=${GAME_TITLE} Launcher
+Icon=$SIMPLE_NAME
+Exec=${WINEPREFIX}/${SIMPLE_NAME} %u
+MimeType=x-scheme-handler/$URI
+NoDisplay=true
+EOF
+	[[ ! -e "$HOME/.local/share/mime/packages" ]] && mkdir "$HOME/.local/share/mime/packages" 2>/dev/null
+cat > "$HOME/.local/share/mime/packages/x-scheme-handler-${URI}.xml" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
     <mime-type type="x-scheme-handler/${URI}">
@@ -193,618 +138,244 @@ cat > "$mimeFolder/packages/x-scheme-handler-${URI}.xml" <<EOF
 </mime-info>
 EOF
 
-	update-desktop-database $appsFolder
-	update-mime-database $mimeFolder
-	log "Created launcher for ${GAME_TITLE}"
-	return 0
-}
+	update-desktop-database "$HOME/.local/share/applications"
+	update-mime-database "$HOME/.local/share/mime"
+	}
 
-create_config() {
-	[[ -f $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf ]] && echo -e "$WARN_LABEL Existing config file found. Skipping..."
-	log "Creating configuration file..."
-	mkdir -p "$DEFAULT_CONFIG_LOCATION" 2>/dev/null
-cat > "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf" <<EOF
-# Infinitas for Linux configuration file
-# See https://github.com/mizztgc/infinitas-for-linux/wiki/Configuration-File for explanations of
-# each configuration option
+	create_icons() {
+		[[ -z $ICOTOOL ]] && return 1
 
-EOF
-	echo "prefix=\"${prefixLocation}\"" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	if [[ $customWineDir ]]; then
-		echo "custom_wine=\"${customWineDir}\"" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+		# Get how many icons we need to create
+		local icon="$(find . -type f -name "${DIR_TITLE}.ico")"
+		local iconDir="$HOME/.local/share/icons/hicolor"
+		local numIcons=$($ICOTOOL -l "${icon}" | wc -l)
+		for i in $(seq 1 $numIcons); do
+			# Get the size of the icons
+			local size="$($ICOTOOL -i $i -l "${icon}" | cut -d' ' -f 3 | cut -d'=' -f 2)"
+
+			# Create the directory if necessary
+			[[ ! -e "${iconDir}/${size}x${size}/apps" ]] && mkdir -p "${iconDir}/${size}x${size}/apps" 2>/dev/null
+			[[ ! -e "${iconDir}/${size}x${size}/mimetypes" ]] && mkdir -p "${iconDir}/${size}x${size}/mimetypes" 2>/dev/null
+
+			# Now extract the icon
+			$ICOTOOL -i $i -x "${icon}" -o "${iconDir}/${size}x${size}/apps/${SIMPLE_NAME}.png"
+			$ICOTOOL -i $i -x "${icon}" -o "${iconDir}/${size}x${size}/mimetypes/x-scheme-handler-${URI}.png"
+		done
+
+	return
+	}
+
+	echo "Showing disclaimer"
+	# Disclaimer
+	$KDIALOG \
+		--title "DISCLAIMER" \
+		--warningyesno "Infinitas for Linux is in no way affiliated with, endorsed, nor supported by KONAMI Amusement. It is meant to be used as a way to allow Linux users to play ${GAME_TITLE} on Linux with minimal tweaks. This script does NOT contain any functionality for bypassing any restrictions pertaining to the e-amusement Cloud network, nor does the script developer have any intentions of implementing such features.\n\nIn order to play ${GAME_TITLE} outside of trial mode, an active KONAMI ID is required, as well as the basic course subscription (¥1628/month) associated with it.\n\nLike many online games today, it is possible to receive bans from the developers for accessing their game outside of what they support. While this script attempts to play it safe with the amount of tweaks to get the game running, the unlikely chance of receiving a ban is possible. Should any ban occur, the script developer is not to be held responsible. Play at your own risk.\n\nProceed with installation?" 2>/dev/null
+
+	if [[ $? -eq 1 ]]; then
+		echo "Quitting installer..." 1>&2
+		exit 1
+	fi
+
+	# Locate files
+	if [[ $(locate_files; echo $?) -eq 0 ]]; then
+		$KDIALOG \
+			--title "Failed to install ${GAME_TITLE}" \
+			--error "Installation of ${GAME_TITLE} cannot proceed as existing files were found within the Wineprefix. If you are reinstalling ${GAME_TITLE}, delete the '${DIR_TITLE}' directory within ${PREFIX_LOCATION}." 2>/dev/null
+
+		exit 5
 	else
-		echo "custom_wine=" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
+		echo "Existing files were not found. Continuing with installation..."
 	fi
 
-	echo "use_winevd=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	echo "use_gamemode=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	echo -e "# gamescope doesn't play nicely with wine, so it's disabled.\n#use_gamescope=false" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	echo -e "# uncomment if you're having issues with crackily/DistorteD audio.\n# it's recommended to keep this value above 40ms\n# pa_latency=40" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-	echo -e "# for any extra environment variables you want to use, add them here\nenv_vars=()" >> "$DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-
-	log "Wrote configuration file to $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf" ok
-	return 0
-}
-
-create_keys() {
-	log "Creating registry keys..."
-	${WINE_NOEXPLORER[@]} reg add "HKLM\\SOFTWARE\\KONAMI\\${DIR_TITLE}" /v 'InstallDir' /t 'REG_SZ' /d "C:\Games\\${DIR_TITLE}\\" /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER[@]} reg add "HKLM\\SOFTWARE\\KONAMI\\${DIR_TITLE}" /v 'ResourceDir' /t 'REG_SZ' /d "C:\Games\\${DIR_TITLE}\\Resource\\" /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER[@]} reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER[@]} reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
-	${WINE_NOEXPLORER[@]} reg add 'HKCU\Software\Wine\DllOverrides' /v 'd3d9' /d 'native,builtin' /f '/reg:64' 2>/dev/null
-	# for experimental wayland driver
-	#${WINE_NOEXPLORER} reg add 'HKCU\SOFTWARE\Wine\Drivers' /v 'Graphics' /t 'REG_SZ' /d 'x11,wayland' /f '/reg:64' 2>/dev/null
-	log "Created registry keys" ok
-	return 0
-}
-
-# run the launcher
-run_installer() {
-	case $cmd in
-		1)
-			# let the ko/jp/cn bros know this script isn't translated
-			# these translations were done with google translate. they may not be accurate
-			# original string: "This script does not contain any <locale> localization. Unless you understand English, you may need to use a machine translator like Google Translate or DeepL to proceed with the installation."
-			case "${LANG}" in
-				ko*) # korean
-					log "이 스크립트에는 한국어 현지화가 포함되어 있지 않습니다. 영어를 이해하지 못하면 Google Translate 또는 DeepL과 같은 기계 번역기를 사용하여 설치를 진행해야 할 수 있습니다." warn
-					;;
-				ja*) # japanese
-					log "このスクリプトには日本語ローカライズは含まれていません。英語を理解していない場合は、インストールを続行するために Google Translate や DeepL などの機械翻訳を使用する必要がある場合があります。" warn
-					;;
-				zh_TW*) # traditional chinese
-					log "該腳本不包含任何中文本地化。除非您懂英語，否則您可能需要使用機器翻譯來繼續安裝。" warn
-					;;
-				zh_*) # simplified chinese
-					log "此脚本不包含任何中文本地化内容。除非您懂英语，否则可能需要使用机器翻译器才能继续安装。" warn
-					;;
-			esac
-
-			VCR2010_LINK="https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe"
-			DXVK_LINK="https://github.com/doitsujin/dxvk/releases/download/v2.4/dxvk-2.4.tar.gz"
-			f=$(locate_files; echo -n $?)
-			if [[ $f -eq 10 ]]; then
-				log "The installer has detected an existing version of ${GAME_TITLE} within this prefix. Setup cannot continue." err
-				exit 2
-			fi
-
-			sleep 2
-			echo -e $disclaimer
-			ynPrompt "Proceed with installation?"
-			if [[ "$?" -ne 0 ]]; then
-				exit 1
-			fi
-
-			mkdir -p "${prefixLocation}" 2>/dev/null
-			${WINEBOOT[@]} -i 2>/dev/null
-			${WINEBOOT[@]} -u 2>/dev/null
-			cd "$(realpath -- ${prefixLocation}/dosdevices/c:)"
-			mkdir temp 2>/dev/null
-			cd temp
-
-			# download and extract game files
-			log "Downloading installer for ${GAME_TITLE}..."
-			if [[ -f "$(basename -- $INSTALLER_LINK)" ]]; then
-				log "Skipped: Found ${GAME_TITLE} installer..."
-			else
-				"${DOWNLOADER}" "$INSTALLER_LINK"
-				if [[ $? -ne 0 ]]; then
-					log "Failed to download ${GAME_TITLE} installer!" err
-					exit 2
-				else
-					log "Downloaded ${GAME_TITLE} installer" ok
-				fi
-			fi
-
-			log "Extracting files from installer..."
-			$MSIEXTRACT "$(basename -- $INSTALLER_LINK)" > /dev/null
-			mkdir -p ./Games/"${DIR_TITLE}"/Resource 2>/dev/null
-
-			[[ -d System64 ]] && mv $(pwd)/System64/* $(pwd)/../windows/system32
-			[[ -d Win ]] && mv $(pwd)/Win/System64/* $(pwd)/../windows/system32
-
-			log "Extracted files from ${GAME_TITLE} installer" ok
-
-			if [[ -d "$(pwd)/Games/${DIR_TITLE}/DirectX 9.0c Redist" ]]; then
-				log "Installing DirectX 9.0c Redist..."
-				[[ $useVerbose ]] && log "Executing $(echo "${WINE[@]} C:\\\\Games\\\\${DIR_TITLE}\\\\DirectX 9.0c Redist\\\\DXSETUP.exe /silent")"
-				${WINE[@]} "$(pwd)/Games/${DIR_TITLE}/DirectX 9.0c Redist/DXSETUP.exe" '/silent'
-				#"${WINE}" "$TEMP_DIRECTORY/Games/${DIR_TITLE}/DirectX 9.0c Redist/DXSETUP.exe" '/silent'
-
-				if [[ $? -ne 0 ]]; then
-					log "Failed to install DirectX 9.0c Redist!" err
-				else
-					log "Installed DirectX 9.0c Redist" ok
-				fi
-			fi
-
-			# download vcr2010
-			log "Downloading Microsoft Visual C++ Redist 2010..."
-			if [[ -f $(basename -- $VCR2010_LINK) ]]; then
-				log "Skipped: Found vcr2010 installer..."
-			else
-				"${DOWNLOADER}" "$VCR2010_LINK"
-				if [[ "$?" -ne 0 ]]; then
-					log "Failed to download Visual C++ Redist 2010!" err
-					exit 2
-				else
-					log "Downloaded Visual C++ Redist 2010" ok
-				fi
-			fi
-
-			# install vcr2010
-			log "Installing Microsoft Visual C++ Redist 2010..."
-			${WINE[@]} "C:\\\\temp\\\\\vcredist_x64.exe" '/quiet' 2>/dev/null
-			if [[ $? -ne 0 ]]; then
-				log "Failed to install Visual C++ Redist 2010!" err
-				exit 2
-			else
-				log "Installed Microsoft Visual C++ Redist 2010" ok
-				rm 'vcredist_x64' 2>/dev/null
-			fi
-
-			if [[ ! $noDXVK ]]; then
-				log "Downloading DXVK..."
-				if [[ -f "$(basename -- $DXVK_LINK)" ]]; then
-					log "Skipped: Found DXVK archive..."
-				else
-					"${DOWNLOADER}" "$DXVK_LINK"
-					if [[ $? -ne 0 ]]; then
-						log "Failed to download DXVK archive!" er
-						exit 2
-					else
-						log "Downloaded DXVK archive" ok
-					fi
-
-					log "Extracting DXVK archive..."
-					tar -zxf $(basename -- $DXVK_LINK)
-					log "Moving .dll files to C:\windows..."
-					cp -Lf $(pwd)/dxvk*/x64/d3d9.dll ../windows/system32
-					cp -Lf $(pwd)/dxvk*/x32/d3d9.dll ../windows/syswow64
-				fi
-			else
-				log "Not installing DXVK" warn
-			fi
-
-			log "Moving game files..."
-			mv $(pwd)/Games ../ 2>/dev/null
-			cd ..
-
-			create_config
-			create_icons
-			create_launcher
-			create_keys
-
-			log "Terminating Wineserver process..."
-			${WINESERVER[@]} -k15
-
-			log "${GAME_TITLE} has been successfully installed!" ok
-			log "Remember to set your audio mode to WASAPI (Shared). otherwise ${GAME_TITLE} will NOT start!" warn
-			exit
-			;;
-		2)
-			log "Not yet implemented." err
-			exit 1
-			;;
-		3)
-			create_launcher
-			;;
-		4)
-			create_icons
-			;;
-		5)
-			create_keys
-			;;
-	esac
-
-	return $?
-}
-
-# run the game
-run_launcher() {
-	log "Searching for ${GAME_TITLE}..."
-	case $(locate_files; echo $?) in
-		1)
-			log "Unable to locate Wineprefix at ${prefixLocation}" err
-			$KDIALOG --title "Failed to launch game" --error "Unable to locate Wineprefix at ${prefixLocation}"
-			exit 21
-			;;
-		2)
-			log "Invalid Wineprefix at ${prefixLocation}" err
-			$KDIALOG --title "Failed to launch game" --error "Invalid Wineprefix at ${prefixLocation}"
-			exit 22
-			;;
-		3)
-			log "Unable to locate installation directory for ${GAME_TITLE}" err
-			$KDIALOG --title "Failed to launch game" --error "Unable to locate installation directory for ${GAME_TITLE}"
-			exit 23
-			;;
-		4)
-			log "Unable to locate resource directory for ${GAME_TITLE}" err
-			$KDIALOG --title "Failed to launch game" --error "Unable to locate resource directory for ${GAME_TITLE}"
-			exit 24
-			;;
-		5)
-			log "Unable to locate launcher executable for ${GAME_TITLE}" err
-			$KDIALOG --title "Failed to launch game" --error "Unable to locate launcher executable for ${GAME_TITLE}"
-			exit 25
-			;;
-		0)
-			log "Found ${GAME_TITLE} launcher (${LAUNCHER_NAME}.exe) within prefix"
-			;;
-	esac
-	if [[ $GAMESCOPE_WAYLAND_DISPLAY || $XDG_CURRENT_DESKTOP == 'gamescope' ]]; then
-		$KDIALOG --title "Gamescope Warning" "You should NOT be running this script directly through a gamescope session.\nPlease enable gamescope support within your configuration file located at $DEFAULT_CONFIG_LOCATION/${SIMPLE_NAME}.conf"
-		killall -ABRT gamescope-wl
-		exit 134
-	fi
-
-	# check time
-	if [[ $(date -u +%H) -ge 20 && $(date -u +%H) -lt 22 ]]; then
-		approx_time=$(printf '%(%l:%M%P %Z)T\n' "$(date +%s -u -d "22:00")")
-		if [[ "${approx_time:0:1}" == ' ' ]]; then
-			approx_time="${approx_time:1}"
+	# Check dependencies
+	if [[ -z $WINE ]]; then
+		echo "Unable to locate binary for wine" 1>&2
+		$KDIALOG \
+			--title "Missing dependencies" \
+			--error "The installer was unable to find a binary for Wine. Please install it from your distribution's package manager." 2>/dev/null
+		exit 10
+	else
+		# Check Wine version
+		echo "$($WINE --version)"
+		local v="$($WINE --version | cut -d'-' -f2 | cut -d'.' -f1)"
+		if [[ $v -lt 9 ]]; then
+			echo "Out of date version of Wine detected"
+			$KDIALOG \
+				--title "Outdated Wine build detected!" \
+				--error "Your version of Wine ( $($WINE --version) ) is not compatible with this script.\nThis script requires a build of Wine based on version 9.0 or later." 2>/dev/null
+			exit 11
 		fi
-		log "The e-amusement Cloud servers are currently down for maintenance.\nPlease wait until $approx_time and try again." err
-		$KDIALOG --title "Maintenance Notice" --error "The e-amusement Cloud servers are currently down for maintenance.\nPlease wait until $approx_time and try again."
-		exit 20
+	fi
+	echo "Found wine (${WINE})"
+
+	[[ -z $WGET ]] && {
+		echo "Unable to locate binary for wget" 1>&2
+		$KDIALOG \
+			--title "Missing dependencies" \
+			--error "The installer was unable to find a binary for wget. Please install it from your distribution's package manager." 2>/dev/null
+		exit 12
+	}
+	echo "Found wget (${WGET})"
+
+	if [[ -z $ICOTOOL ]]; then
+		echo "Unable to locate binary for icotool" 1>&2
+		$KDIALOG \
+			--title "Missing dependencies" \
+			--sorry "The installer was unable to find a binary for icotool (icoutils). You will not be able to generate icons for ${GAME_TITLE}." 2>/dev/null
+	else
+		echo "Found icoutils (${ICOTOOL})"
 	fi
 
+	if [[ -z $PW_LOOPBACK ]]; then
+		echo "Unable to locate binary for pw-loopback" 1>&2
+		$KDIALOG \
+			--title "Missing dependencies" \
+			--error "The installer was unable to find a binary for pw-loopback, part of pipewire-audio. Please install it from your distribution's package manager." 2>/dev/null
+		exit 12
+	fi
+	echo "Found pw-loopback (${PW_LOOPBACK})"
+
+	# Now that all dependencies are in order, it's time to get started.
+	if [[ -e "${PREFIX_LOCATION}" && -d "${PREFIX_LOCATION}" ]]; then
+		if [[ -f "${PREFIX_LOCATION}/system.reg" ]]; then
+			echo "Existing Wineprefix detected, expect problems."
+			$WINEBOOT -u 2>/dev/null
+		else
+			$WINEBOOT -i 2>/dev/null
+		fi
+	else
+		$WINEBOOT -i 2>/dev/null
+	fi
+
+	cd "${WINEPREFIX}/dosdevices/c:/"
+
+	# Download the installer
+	echo "Downloading installer for ${GAME_TITLE}"
+	$WGET -t 3 "$INSTALLER_LINK"
+	if [[ $? -ne 0 ]]; then
+		echo "Failed to download installer for ${GAME_TITLE}"
+		$KDIALOG \
+			--title "Installation failed!" \
+			--error "Unable to download installer for ${GAME_TITLE}" 2>/dev/null
+		exit 15
+	fi
+
+	# Run the installer
+	echo "Running installer for ${GAME_TITLE}"
+	echo "NOTE: All CJK characters may render as boxes. This is due to the Wineprefix not having any CJK fonts available."
+	$WINE msiexec '/i' $(basename -- $INSTALLER_LINK) '/L*' "Z:\\\\tmp\\\\${SIMPLE_NAME}_install.log"
+	case $? in
+		1)
+			$KDIALOG \
+				--title "Installation failed!" \
+				--error "The ${GAME_TITLE} installer was terminated unexpectedly." 2>/dev/null
+			exit 16
+			;;
+		66)
+			$KDIALOG \
+				--title "Installation failed!" \
+				--error "The ${GAME_TITLE} installer was cancelled" 2>/dev/null
+			exit 17
+			;;
+		67)
+			$KDIALOG \
+				--title "Installation failed!" \
+				--error "The ${GAME_TITLE} installer failed to install. Check /tmp/${SIMPLE_NAME}_install.log to find out what happened." 2>/dev/null
+			exit 18
+			;;
+	esac
+
+	# Set keys
+	echo "Setting additional registry keys..."
+	$WINE reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' 2>/dev/null
+	$WINE reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
+
+	# Create launcher and mimetype
+	echo "Creating launcher and mimetype for ${GAME_TITLE}..."
+	create_launcher
+
+	# Create icons
+	echo "Creating icons for ${GAME_TITLE}..."
+	create_icons
+
+	# Copy this script to the prefix directory
+	cp "${SCRIPT_DIR}/$(basename -- $0)" "${WINEPREFIX}/${SIMPLE_NAME}"
+	chmod +x "${WINEPREFIX}/${SIMPLE_NAME}"
+
+	echo "Installation complete!"
 	if [[ -z "$LOGIN_TOKEN" ]]; then
-		log "No login token was given. Opening launch page in a web browser..." err
-		exec env TERM='dumb' xdg-open "${LAUNCH_PAGE}"
-	else
-		# let's get going
-		[[ -n $paLatency ]] && export PULSE_LATENCY_MSEC=$paLatency
-		export PULSE_SINK='konaste'
+		$KDIALOG \
+			--title "Installation Complete" \
+			--yesno "${GAME_TITLE} has been successfully installed. Would you like to open the launch page?" 2>/dev/null
 
-		# run loopback device
-		if [[ $noLoopback ]]; then
-			log "PipeWire loopback device has not been enabled! You may not have any sound unless your audio sample rate is set to 44.1kHz!" warn
+		if [[ $? -eq 0 ]]; then
+			exec TERM='dumb' xdg-open "$LAUNCH_PAGE"
 		else
-			log "Starting PipeWire loopback device..."
-			pw-loopback -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
+			exit 0
 		fi
-
-
-		# launch the game
-		${WINESERVER[@]} -p2 # start wineserver
-		${LAUNCH_PARAMS[@]} "$LAUNCHER_EXECUTABLE" "$LOGIN_TOKEN" # launch the game
-		log "${LAUNCHER_NAME}.exe process terminated. Waiting for Wineserver process to end.."
-		${WINESERVER[@]} -w # wait for winserver to terminate
-		log "Wineserver process ended. Terminating PipeWire loopback device..."
-		# kill loopback device
-		kill $(jobs -p)
 	fi
 
-	exit $?
+	return 0
 }
 
-# setting variables
-main() {
-	declare -gr INSTALL_DIR="C:\\\\Games\\\\${DIR_TITLE}\\\\"
-	declare -gr RESOURCE_DIR="C:\\\\Games\\\\${DIR_TITLE}\\\\"
-	declare -gr LAUNCHER_EXECUTABLE="C:\\\\Games\\\\${DIR_TITLE}\\\\launcher\\\\modules\\\\${LAUNCHER_NAME}.exe"
+# And this is where all the fun happens.
+if [[ -n "$1" ]]; then
+	export WINEPREFIX="$HOME/.local/share/konaste"
+	if [[ "$1" == ${URI}://* ]]; then
+		echo "Detected login token for ${GAME_TITLE}: $1"
+		[[ $TERM != 'dumb' ]] && echo "Avoid passing login tokens directly to this script from a terminal emulator." 1>&2
+		declare -gr LOGIN_TOKEN="$1"
 
-	source_config() {
-		if [[ ! $cmd || $cmd -ne 1 ]]; then
-			if [[ -f "${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf" && -r "${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf" ]]; then
-				log "Found configuration file at ${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf"
- 				source "${DEFAULT_CONFIG_LOCATION}/${SIMPLE_NAME}.conf"
-
-				if [[ -n $custom_wine ]]; then
-					declare -gr customWineDir="${custom_wine}"
+		locate_files; case $? in
+			0)
+				run_game; exit $?
+				;;
+			1|2|3|4)
+				echo "${GAME_TITLE} was not found in default prefix location" 1>&2
+				$KDIALOG \
+					--title "Failed to launch ${GAME_TITLE}" \
+					--warningyesno "${GAME_TITLE} is not installed on your system.\nWould you like to install it?" 2>/dev/null
+				if [[ $? -eq 0 ]]; then
+					run_installer
+					# Run game if a login token was already provided
+					[[ $? -eq 0 ]] && run_game; exit $?
 				fi
-
- 				if [[ -n $prefix ]]; then
-					declare -gr prefixLocation="${prefix}"
-				else
-					declare -gr prefixLocation="${DEFAULT_PREFIX_LOCATION}"
-				fi
-
- 				if [[ ! $cmd ]]; then
-					if [[ $use_winevd && $use_winevd == 'true' ]]; then
-						declare -gr useWineVD=true 2>/dev/null
-					fi
-
-					if [[ $use_gamemode && $use_gamemode == 'true' ]]; then
-						if [[ $(which gamemoderun 2>/dev/null) ]]; then
-							declare -gr useGM=true 2>/dev/null
-						else
-							log "use_gamemode has been set to true, but gamemode was not found on your system."
-						fi
-					fi
-
-					if [[ $use_gamescope && $use_gamescope == 'true' ]]; then
-						if [[ $(which gamescope 2>/dev/null) ]]; then
-							log "It is not recommended to use gamescope!" warn
-							declare -gr useGS=true 2>/dev/null
-							declare -gr useWineVD=true 2>/dev/null
-						else
-							log "use_gamescope has been set to true, but gamescope was not found on your system."
-						fi
-					fi
-
-					if [[ -n $pa_latency ]]; then
-						declare -gr paLatency=$pa_latency
-					fi
-
-					if [[ $no_loopback && $no_loopback == 'true' ]]; then
-						declare -gr noLoopback=true
-					fi
- 				fi
-			else
-				log "Failed to locate configuration file for ${GAME_TITLE}. $(basename -- $0) will use default options." err
- 				log "Using ${DEFAULT_PREFIX_LOCATION} as location for Wineprefix..."
- 				declare -gr prefixLocation="${DEFAULT_PREFIX_LOCATION}"
- 				if [[ ! $cmd ]]; then
-					log "Setting PulseAudio latency to 40ms..."
-					declare -gr pa_latency=40
-					if [[ $(which gamemoderun 2>/dev/null) ]]; then
-						log "Enabling gamemoded..."
-						declare -gr useGM=true
-					fi
-					if [[ $XDG_SESSION_TYPE == 'wayland' ]]; then
-						log "Wayland detected; forcing virtual desktop" warn
-						declare -gr useWineVD=true
-					fi
- 				fi
-			fi
-		else	# install
-			if [[ -z $prefixLocation ]]; then
-				declare -gr prefixLocation="${DEFAULT_PREFIX_LOCATION}"
-				log "Using ${DEFAULT_PREFIX_LOCATION} as location for Wineprefix..."
-			else
-				declare -gr prefixLocation="${prefixLocation}"
-				log "Using ${prefixLocation} as location for Wineprefix..."
-
-			fi
-
-			declare -gr useVerbose=$useVerbose 2>/dev/null
-			declare -gr noDXVK=$noDXVK 2>/dev/null
-			declare -gr customWineDir="${customWineDir}" 2>/dev/null
-		fi
-	}
-
-	set_winevars() {
-		[[ $useVerbose ]] && log "Setting Wine variables..."
-		# check to see if there's a custom build
-		if [[ -n $customWineDir && $customWineDir != '/usr' && $customWineDir != '/' ]]; then
-			[[ ! -e "${customWineDir}" ]] && log "Couldn't locate custom Wine build directory at ${customWineDir}" err && exit 2
-			[[ ! -d "${customWineDir}" ]] && log "Custom Wine build specified is not a directory" err && exit 2
-			[[ ! -d "${customWineDir}/bin" ]] && log "Couldn't locate ${customWineDir}/bin" err && exit 2
-			[[ ! -e "${customWineDir}/bin/wine" ]] && "Couldn't locate ${customWineDir}/bin/wine" err && exit 2
-			[[ ! -x "${customWineDir}/bin/wine" ]] && "Wine executable in ${customWineDir}/bin exists, but is not executable." err && exit 2
-			log "Using custom Wine build ($(basename -- ${customWineDir}); ${customWineDir})..."
-			declare -gr WINEBUILD_DIR="${customWineDir}" 2>/dev/null
-		else
-			if [[ $(which wine 2>/dev/null) ]]; then
-				log "Using native build of Wine ($(which wine))"
-				declare -gr WINEBUILD_DIR="$(cd -- $(dirname -- $(which wine))/.. && pwd)" 2>/dev/null
-			else
-				log "Wine was found on your system." err
-			fi
-		fi
-
-		export WINEPREFIX="${prefixLocation}"
-		export WINEDLLOVERRIDES="mscoree;mshtml=d"
-		export WINEDEBUG="fixme-all"
-		export DXVK_LOG_LEVEL='error'
-		export DXVK_FRAME_RATE=120
-		export DXVK_CONFIG="d3d9.maxFrameRate = 120; d3d9.syncInterval = 1"
-
-		declare -gr WINE="${WINEBUILD_DIR}/bin/wine"
-		declare -gr WINE_NOEXPLORER="env WINEDLLOVERRIDES=${WINEDLLOVERRIDES};explorer.exe=d ${WINE}"
-		declare -gr WINEBOOT="${WINEBUILD_DIR}/bin/wineboot"
-		declare -gr WINEPATH="${WINEBUILD_DIR}/bin/winepath"
-		declare -gr WINESERVER="${WINEBUILD_DIR}/bin/wineserver"
-		#fi
-
-		# check wine version
-		[[ $useVerbose ]] && log "Checking Wine version..."
-		IFS='-' read -r -d '(' -a wine_ver < <(${WINE[@]} --version)
-		[[ $useVerbose ]] && log "$(${WINE[@]} --version)"
-		[[ ${wine_ver[0]} != 'wine' ]] && log "Invalid Wine executable found" err && exit 2
-		for w in ${wine_ver[@]}; do
-			if [[ $(grep -w '.' <<< "$w") ]]; then
-				v=$(cut -d'.' -f1 <<< "$w")
-				if [[ ${v[0]} -lt 9 ]]; then
-					log "This script requires Wine 9.0 or later" err
-					exit 2
-				fi
-			fi
-		done
-		[[ $useVerbose ]] && log "Wine executable has passed the version check."
-
-		if [[ $useVerbose ]]; then
-			log "Setting WINE to $(echo ${WINE[@]})"
-			log "Setting WINE_NOEXPLORER to $(echo ${WINE_NOEXPLORER[@]})"
-			log "Setting WINEBOOT to $(echo ${WINEBOOT[@]})"
-			log "Setting WINEPATH to $(echo ${WINEPATH[@]})"
-			log "Setting WINESERVER to $(echo ${WINESERVER[@]})"
-		fi
-
-		return 0
-	}
-
-	set_installervars() {
-		[[ $useVerbose ]] && log "Setting installation variables..."
-
-		if [[ $cmd -eq 1 ]]; then
-			# check for dependencies
-			if [[ ! $cliDownloader ]]; then
-				if [[ $(which wget 2>/dev/null) ]]; then
-					log "Using wget ($(which wget)) for downloading files..."
-					declare -gr DOWNLOADER="$(which wget)"
-				elif [[ $(which curl 2>/dev/null) ]]; then
-					log "Using curl ($(which curl)) for downloading files..."
-					declare -gr DOWNLOADER="$(which curl)"
-				else
-					log "Could not find a suitable CLI download utility. Installation of ${GAME_TITLE} cannot continue." err
-					exit 2
-				fi
-			else
-				if [[ ! $(which "${cliDownloader}" 2>/dev/null) ]]; then
-					log "--use-downloader is set to ${cliDownloader}, but ${cliDownloader} was not found on your system." err
-					exit 2
-				else
-					log "Using ${cliDownloader} for downloading files..."
-					declare -gr DOWNLOADER="$(which ${cliDownloader})"
-				fi
-			fi
-
-			if [[ $(which msiextract 2>/dev/null) ]]; then
-				log "Using msiextract ($(which msiextract)) for extracting the ${GAME_TITLE} installer..."
-				declare -gr MSIEXTRACT="$(which msiextract)"
-			else
-				log "Could not find executable for msiextract. Please install \033[1mmsitools\033[0m from your distro's package manager." err
-				exit 2
-			fi
-		fi
-
-		# icon creation
-		if [[ $cmd -eq 3 || $cmd -eq 1 ]]; then
-			if [[ $(which magick 2>/dev/null) ]]; then
-				declare -gr MAGICK="$(which magick)"
-			elif [[ $(which convert 2>/dev/null) ]]; then
-				# some distros still use 'convert' for imagemagick operations instead of 'magick'
-				declare -gr MAGICK="$(which convert)"
-			else
-				log "Could not find executable for imagemagick. You will not be able to create icons for ${GAME_TITLE}" warn
-			fi
-		fi
-	}
-
-	set_gamevars() {
-		[[ $useVerbose ]] && log "Setting gameplay variables..."
-		[[ ! $(which kdialog 2>/dev/null) ]] && log "Unable to find executable for \033[1mkdialog\033[0m." err && exit 5
-		[[ ! $(which pw-loopback 2>/dev/null) ]] && log "Unable to find executable for \033[1mpw-loopback\033[0m." err && exit 6
-
-		declare -gr KDIALOG="$(which kdialog)"
-		declare -gr PW_LOOPBACK="$(which pw-loopback)"
-		declare -ag LAUNCH_PARAMS=()
-
-		[[ $useGM && $useGM == 'true' ]] && LAUNCH_PARAMS+=( "$(which gamemoderun)" )
-		[[ $useGS && $useGS == 'true' ]] && LAUNCH_PARAMS+=( "$(which gamescope) -H 1080 -W 1920 -h 1080 -w 1920 -r 120 --framerate-limit 120 -f --" )
-		LAUNCH_PARAMS+=( "env LANG=ja_JP.UTF-8" "${WINE[@]} start /high /wait" )
-		[[ $useWineVD && $useWineVD == 'true' ]] && LAUNCH_PARAMS+=( "explorer /desktop=${SIMPLE_NAME},1920x1080" )
-		#LAUNCH_PARAMS+=( "$LAUNCHER_EXECUTABLE" "$LOGIN_TOKEN" )
-	}
-
-	source_config
-	set_winevars
-	if [[ -n $cmd ]]; then # run an installation function
-		set_installervars
-		run_installer $cmd
-	else # run the game
-		set_gamevars
-		run_launcher
-	fi
-
-	return $?
-}
-
-if [[ $# -gt 0 ]]; then
-	if [[ "$1" =~ "${URI}://" ]]; then
-		[[ $TERM != 'dumb' ]] && log "Avoid passing login tokens directly to this script." warn
-		log "Launching ${GAME_TITLE}..."
-		declare -gr LOGIN_TOKEN="$1" 2>/dev/null
-		shift
-		if [[ $# -gt 0 ]]; then
-			log "Ignoring $# extra argument(s)" warn
-		fi
+				exit 20
+				;;
+			5|6)
+				$KDIALOG \
+					--title "Failed to launch ${GAME_TITLE}" \
+					--error "Unable to locate installation and/or resource directory for ${GAME_TITLE} within Wineprefix" 2>/dev/null
+				exit 21
+				;;
+			7)
+				$KDIALOG \
+					--title "Failed to launch ${GAME_TITLE}" \
+					--error "Unable to locate launcher for ${GAME_TITLE} within Wineprefix" 2>/dev/null
+				exit 22
+				;;
+		esac
+	elif [[ "$1" == 'install' ]]; then
+		export WINEDLLOVERRIDES="mscoree;mshtml=d;ieframe=d"
+		run_installer; exit $?
 	else
-		while [[ $# -gt 0 ]]; do
-			if [[ "${1:0:2}" == '--' ]]; then
-				arg="${1##*=}"
-				case "${1:2}" in
-					verbose)
-						declare -g useVerbose=true 2>/dev/null
-						;;
-					prefix|prefix=*)
-						[[ -z "${arg}" ]] && log "No custom Wine build directory specified." err && exit 1
-						[[ "${arg:0:1}" == '~' ]] && arg="$HOME${arg:1}"
-						declare -g prefixLocation="${arg}" 2>/dev/null
-						;;
-					winebuild|winebuild=*)
-						[[ -z "${arg}" ]] && log "No custom Wine build directory specified." err && exit 1
-						[[ "${arg:0:1}" == '~' ]] && arg="$HOME${arg:1}"
-						declare -g customWineDir="${arg}" 2>/dev/null
-						;;
-					use-downloader|use-downloader=*)
-						[[ -z "${arg}" ]] && log "No CLI download utility specified." err && exit 1
-						if [[ "${arg}" == 'curl' || "${arg}" == 'wget' ]]; then
-							declare -g cliDownloader="${arg}" 2>/dev/null
-						else
-							log "Unknown CLI download utility \033[1m${arg}\033[0m" err
-							exit 1
-						fi
-						;;
-					'no-dxvk')
-						declare -g noDXVK=true 2>/dev/null
-						;;
-					*)
-						log "Unknown argument $1. Type \033[39m$(basename -- $0) help for a list of usable arguments" err
-						exit 1
-						;;
-				esac
-			else
-				case "$1" in
-					help)
-cat <<EOM
+		echo "Unrecognized argument $1" 1>&2
+		exit 1
+	fi
+else
+	if [[ $(locate_files; echo $?) -eq 0 ]]; then
+		echo "No arguments provided. Opening $LAUNCH_PAGE in a web browser..."
+		[[ ! $(command -v xdg-open) ]] && echo "This script requires xdg-open (xdg-utils) to open the launcher website for ${GAME_TITLE}." && exit 255
+		exec xdg-open "$LAUNCH_PAGE"
+	else
+		echo "${GAME_TITLE} was not found in ~/.local/share/konaste" 1>&2
+		$KDIALOG \
+			--title "Not installed" \
+			--warningyesno "${GAME_TITLE} is not installed on your system.\nWould you like to install it?" 2>/dev/null
+		if [[ $? -eq 0 ]]; then
+			run_installer; exit $?
+		fi
 
-Infinitas for Linux install script by Mizzt (mizztgc)
-https://github.com/mizztgc/infinitas-for-linux
-
-General commands/arguments:
-  help: Shows this message
-
-Install commands:
-  install: Install ${GAME_TITLE}
-  uninstall: Uninstall ${GAME_TITLE} (not yet implemented)
-
-Install arguments:
-  --prefix: Set the location of the prefix (default: ~/.local/share/konaste)
-    ex: --prefix=/path/to/prefix
-  --winebuild: Use a custom build of Wine for installation
-    ex: --winebuild=/path/to/winebuild_dir
-  --verbose: Output more information during installation
-  --no-dxvk: Do not install DXVK to the Wineprefix
-
-Post-install commands:
-  create-icons: Generates the icons for ${GAME_TITLE} (requires imagemagick)
-  create-launcher: Generates a new .desktop launcher for opening the game
-  fix-registry: Fixes the registry keys in the prefix to help the game run
-
-EOM
-							exit 0
-						;;
-					install)
-						declare -gr cmd=1 2>/dev/null
-						;;
-					uninstall)
-						declare -gr cmd=2 2>/dev/null
-						;;
-					'create-launcher')
-						declare -gr cmd=3 2>/dev/null
-						;;
-					'create-icons')
-						declare -gr cmd=4 2>/dev/null
-						;;
-					'fix-registry')
-						declare -gr cmd=5 2>/dev/null
-						;;
-					*)
-						log "Unknown command $1. Type \033[39m$(basename -- $0) help for a list of usable arguments" err
-						exit 1
-						;;
-				esac
-			fi
-
-			shift
-		done
+		exit 1
 	fi
 fi
-
-main; exit $?
