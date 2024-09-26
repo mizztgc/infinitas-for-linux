@@ -1,9 +1,7 @@
-i'm burned out from all this programming, so i'm probably not going to update this script as much.
-
 # Infinitas for Linux
 An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash
 
-Be sure to check out the [wiki](https://github.com/mizztgc/infinitas-for-linux/wiki) for some helpful information
+Be sure to check out the [wiki](https://github.com/mizztgc/infinitas-for-linux/wiki) and [Known Issues](https://github.com/mizztgc/infinitas-for-linux/wiki/Known-Issues) for some helpful information
 
 ## DISCLAIMER:
 
@@ -30,6 +28,8 @@ This script requires the following dependencies:
 * **kdialog** (required; for showing message boxes)
 * **icoutils** (game install only; for creating icons)
 * **wget** (game install only; for downloading the installer)
+
+As of right now, the Flatpak build of Wine is unsupported.
 
 ## HOW TO INSTALL:
 ```
