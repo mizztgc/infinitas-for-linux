@@ -2,6 +2,8 @@
 
 # Default variables
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+PREFIX_LOCATION="$HOME/.dotfiles/prefixes/konaste"
+export WINEPREFIX="${PREFIX_LOCATION}"
 
 # Game information
 GAME_TITLE='beatmania IIDX INFINITAS'
@@ -12,20 +14,26 @@ LAUNCH_PAGE="https://p.eagate.573.jp/game/infinitas/2/api/login/login.html"
 LAUNCHER_NAME='bm2dx_launcher'
 URI='bm2dxinf'
 
-[[ ! $(command -v wine) ]] && echo "This script requires wine" && exit 1
-[[ ! $(command -v kdialog) ]] && echo "This script requires kdialog" && exit 2
-[[ ! $(command -v pipewire) ]] && echo "This script requires pipewire" && exit 3
-[[ ! $(command -v pipewire-pulse) ]] && echo "This script requires pipewire-pulse" && exit 4
-
 KDIALOG="$(command -v kdialog)"
 ICOTOOL="$(command -v icotool)"
 PW_LOOPBACK="$(command -v pw-loopback)"
 WGET="$(command -v wget)"
-# custom wine support will be added later
+GAMEMODE="$(command -v gamemoderun)"
+GAMESCOPE="$(command -v gamescope)"
 WINE="$(command -v wine)"
 WINEBOOT="$(command -v wineboot)"
 WINESERVER="$(command -v wineserver)"
 
+# Kill the script if being ran from a TTY
+if [[ $XDG_SESSION_TYPE != 'x11' && $XDG_SESSION_TYPE != 'wayland' ]]; then
+	echo "This script requires an active Xorg (X11)/Wayland session"
+	exit 1
+fi
+
+# Kill the script if no dialog box handler is found
+[[ -z $KDIALOG ]] && echo "Unable to locate a binary for kdialog" && exit 1
+
+# Function for locating the game files
 locate_files() {
 	# TODO: Improve this.
 	[[ -n "$LAUNCHER_EXECUTABLE" ]] && return 0
@@ -44,15 +52,79 @@ locate_files() {
 
 # Game launch function
 run_game() {
-	# Use DXVK if found
-	if [[ -d /usr/share/dxvk ]]; then
-		echo "Located DXVK at /usr/share/dxvk"
-		export WINEDLLPATH="${WINEDLLPATH}:/usr/share/dxvk/x32:/usr/share/dxvk/x64"
-		export DXVK_LOG_LEVEL='error'
-		export DXVK_FRAME_RATE=120
-	else
-		echo "DXVK directory was not found." 1>&2
-	fi
+	declare -a PRELAUNCH_PARAMS=( )
+
+	# Gamescope support
+ 	if [[ $IOL_GAMESCOPE -eq 1 || $IOL_GAMESCOPE -eq 2 ]]; then
+ 		if [[ -z $GAMESCOPE ]]; then
+ 			echo "IOL_GAMESCOPE set to 1, but gamescope was not found on your system." 1>&2
+ 		else
+ 			echo "Enabling Gamescope..."
+ 			PRELAUNCH_PARAMS+=( "${GAMESCOPE}" -w 1920 -h 1080 -r 120 --framerate-limit 120 -f )
+
+ 			# If IOL_GS is set to 1, use the SDL backend for Gamescope
+ 			# This is mainly a compatibility feature for those running NVIDIA GPUs, because of a
+ 			# core dump issue.
+ 			[[ $IOL_GS_NVIDIA -eq 1 ]] && PRELAUNCH_PARAMS+=( --backend sdl )
+ 			PRELAUNCH_PARAMS+=( -- )
+
+ 			# Gamescope will use the following parameters:
+ 			# - Resolution (-w -h): 1920x1080
+ 			# - Refresh rate (-r): 120Hz
+ 			# - FPS limit (--framerate-limit): 120fps
+ 			#    * this is needed because you may get
+ 		fi
+ 	fi
+
+ 	# Disable DXVK
+ 	if [[ -z $IOL_NO_DXVK || $IOL_NO_DXVK -eq 0 ]]; then
+ 		# Use DXVK if found
+ 		if [[ -d "${WINEPREFIX}/dosdevices/c:/dxvk" || -d /usr/share/dxvk ]]; then
+ 			if [[ -d "${WINEPREFIX}/dosdevices/c:/dxvk" ]]; then
+ 				DXVK_LOCATION="${WINEPREFIX}/dosdevices/c:/dxvk"
+ 			else
+ 				DXVK_LOCATION="/usr/share/dxvk"
+ 			fi
+
+ 			if [[ -f ${DXVK_LOCATION}/x32/d3d9.dll && -f ${DXVK_LOCATION}/x64/d3d9.dll ]]; then
+				echo "Located DXVK at ${DXVK_LOCATION}"
+				export WINEDLLPATH="${DXVK_LOCATION}/x32:${DXVK_LOCATION}/x64"
+				export DXVK_LOG_LEVEL='error'
+				export DXVK_FRAME_RATE=120
+ 			else
+				echo "Unable to locate d3d9.dll in ${DXVK_LOCATION}" 1>&2
+ 			fi
+ 		else
+ 			echo "Couldn't locate DXVK directory. Using built-in DirectX..." 1>&2
+ 		fi
+ 	else
+ 		echo "Using built-in DirectX..."
+ 	fi
+
+	# Disable loopback device (NOT RECOMMENDED!)
+	if [[ -z $IOL_NO_LOOPBACK || $IOL_NO_LOOPBACK -eq 0 ]]; then
+		if [[ -z $PW_LOOPBACK ]]; then
+			echo "No binary for 'pw-loopback' was found. The PipeWire loopback device will not be available."
+			echo "WARNING: Ensure your audio sample rate is set to 44100Hz, or you will have no sound!" 1>&2
+			$KDIALOG \
+				--title "Loopback Warning" \
+				--sorry "No binary for <code>pw-loopback</code> was found on your system. Infinitas for Linux requires <code>pw-loopback</code> for enabling a virtual output to ease any audio issues with little to no manual audio configuration. Unless your audio sample rate within PipeWire is already set to 44100Hz, <strong><em>you will not have any sound while playing ${GAME_TITLE}.</em></strong>" \
+				--dontagain "${WINEPREFIX}/.kdialog_ignore:no_pwLoopback" 2>/dev/null
+ 		else
+			# Start PipeWire loopback device
+			echo "Starting PipeWire loopback device..."
+			$PW_LOOPBACK -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
+			export PULSE_SINK='konaste'
+ 		fi
+ 	else
+ 		echo "PipeWire loopback device has been disabled."
+ 		echo "WARNING: Ensure your audio sample rate is set to 44100Hz, or you will have no sound!" 1>&2
+ 		$KDIALOG \
+			--title "Loopback Warning" \
+			--sorry "You have chosen to disable the PipeWire loopback device. Unless your audio sample rate within PipeWire is already set to 44100Hz, <strong><em>you will not have any sound while playing ${GAME_TITLE}.</em></strong>" \
+			--dontagain "${WINEPREFIX}/.kdialog_ignore:pwLoopbackDisabled" 2>/dev/null
+ 	fi
+
 	export WINEDLLOVERRIDES="mscoree"
 	export WINEDEBUG='fixme-all'
 
@@ -73,18 +145,18 @@ run_game() {
 	# Detect Wayland and warn the user
 	if [[ $XDG_SESSION_TYPE == 'wayland' ]]; then
 		echo "Wayland detected; expect issues" 1>&2
-		$KDIALOG \
-			--title "Wayland Warning" \
-			--sorry "You appear to be utilizing a Wayland session provided by $XDG_CURRENT_DESKTOP. Wayland has a glaring issue of only exposing your current refresh rate to applications, which in turn, causes ${GAME_TITLE} to fail the display initialization process. Before clicking 'OK', ensure your display's refresh rate is set to 60Hz (or 120Hz if supported)." \
-			--dontagain "${WINEPREFIX}/.kdialog_ignore:waylandWarning" 2>/dev/null
+
+		# why the hell does this keep breaking the script
+# 		if [[ -n $KDIALOG ]]; then
+# 			$KDIALOG \
+# 			--title "Wayland Warning" \
+# 			--sorry "You appear to be utilizing a Wayland session provided by '"$XDG_CURRENT_DESKTOP"'. Wayland has a glaring issue of only exposing your current refresh rate to applications, which in turn, causes '"${GAME_TITLE}"' to fail the display initialization process if you are running a non-standard refresh rate, such as 75Hz, 144Hz, 165Hz, etc. Before clicking <strong>OK</strong>, ensure your refresh rate is set to 60Hz (or 120Hz if supported).' \
+# 			--dontagain "${WINEPREFIX}/.kdialog_ignore:waylandWarning" 2>/dev/null
 	fi
 
-	# Start PipeWire loopback device
-	echo "Starting PipeWire loopback device..."
-	$PW_LOOPBACK -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
-	export PULSE_SINK='konaste'
+	# Alright, we're done here.
 	${WINESERVER} -p2
-	${WINE} start '/high' '/wait' "${LAUNCHER_EXECUTABLE}" "$LOGIN_TOKEN"
+	"${PRELAUNCH_PARAMS[@]}" ${WINE} start '/high' '/wait' "${LAUNCHER_EXECUTABLE}" "$LOGIN_TOKEN"
 	${WINESERVER} -w
 
 	sleep 1
@@ -96,10 +168,7 @@ run_game() {
 
 # Installation function
 run_installer() {
-	[[ ! $(command -v kdialog) ]] && echo "This script requires kdialog for installation." && exit 4
-
 	create_launcher() {
-	if [[ -n $ICOTOOL ]]; then
 cat > "$HOME/.local/share/applications/${SIMPLE_NAME}.desktop" <<EOF
 [Desktop Entry]
 Name=${GAME_TITLE}
@@ -108,7 +177,7 @@ GenericName=Rhythm Game
 Icon=$SIMPLE_NAME
 Exec=xdg-open $LAUNCH_PAGE
 EOF
-	fi
+
 cat > "$HOME/.local/share/applications/${SIMPLE_NAME}-launcher.desktop" <<EOF
 [Desktop Entry]
 Name=${GAME_TITLE} Launcher
@@ -157,11 +226,25 @@ EOF
 	return
 	}
 
+	# Show a localization warning for the JP bros
+	if [[ "${LANG}" == ja_* || "${LANGUAGE}" == ja_* ]]; then
+		# Original string: Some dialog boxes you see during installation may not appear in Japanese. If necessary, you may need to use a machine translation utility to continue. Do you still want to install ${GAME_TITLE}?
+		echo "Showing localization warning"
+		$KDIALOG \
+			--title "インストールの警告" \
+			--warningyesno 'インストール中に表示されるダイアログ ボックスの一部は日本語で表示されない場合があります。必要に応じて、機械翻訳ユーティリティを使用して続行する必要があります。<br><br><strong>'"${GAME_TITLE}"' をインストールしますか?</strong>' \
+			--yes-label 'はい' \
+			--no-label 'いいえ' 2>/dev/null
+		if [[ $? -ne 0 ]]; then
+			exit 1
+		fi
+	fi
+
 	echo "Showing disclaimer"
 	# Disclaimer
 	$KDIALOG \
 		--title "DISCLAIMER" \
-		--warningyesno "Infinitas for Linux is in no way affiliated with, endorsed, nor supported by KONAMI Amusement. It is meant to be used as a way to allow Linux users to play ${GAME_TITLE} on Linux with minimal tweaks. This script does NOT contain any functionality for bypassing any restrictions pertaining to the e-amusement Cloud network, nor does the script developer have any intentions of implementing such features.\n\nIn order to play ${GAME_TITLE} outside of trial mode, an active KONAMI ID is required, as well as the basic course subscription (¥1628/month) associated with it.\n\nLike many online games today, it is possible to receive bans from the developers for accessing their game outside of what they support. While this script attempts to play it safe with the amount of tweaks to get the game running, the unlikely chance of receiving a ban is possible. Should any ban occur, the script developer is not to be held responsible. Play at your own risk.\n\nProceed with installation?" 2>/dev/null
+		--warningyesno 'Infinitas for Linux is in no way affiliated with, endorsed, nor supported by KONAMI Amusement. It is meant to be used as a way to allow Linux users to play '"${GAME_TITLE}"' on Linux with minimal tweaks. This script does NOT contain any functionality for bypassing any restrictions pertaining to the e-amusement Cloud network, nor does the script developer have any intentions of implementing such features.<br><br>In order to play '"${GAME_TITLE}"' outside of trial mode, an active KONAMI ID is required, as well as the basic course subscription (¥1628/month) associated with it.<br><br>Like many online games today, it is possible to receive bans from the developers for accessing their game outside of what they support. While this script attempts to play it safe with the amount of tweaks to get the game running, the unlikely chance of receiving a ban is possible. Should any ban occur, the script developer is not to be held responsible. <em>Play at your own risk</em>.<br><br><strong>Proceed with installation?</strong>' 2>/dev/null
 
 	if [[ $? -eq 1 ]]; then
 		echo "Quitting installer..." 1>&2
@@ -272,7 +355,7 @@ EOF
 		67)
 			$KDIALOG \
 				--title "Installation failed!" \
-				--error "The ${GAME_TITLE} installer failed to install. Check /tmp/${SIMPLE_NAME}_install.log to find out what happened." 2>/dev/null
+				--error 'The '"${GAME_TITLE}"' installer failed to install. Check <code>/tmp/'"${SIMPLE_NAME}"'_install.log</code> to find out what happened.' 2>/dev/null
 			exit 18
 			;;
 	esac
@@ -301,11 +384,7 @@ EOF
 			--title "Installation Complete" \
 			--yesno "${GAME_TITLE} has been successfully installed. Would you like to open the launch page?" 2>/dev/null
 
-		if [[ $? -eq 0 ]]; then
-			exec TERM='dumb' xdg-open "$LAUNCH_PAGE"
-		else
-			exit 0
-		fi
+		[[ $? -eq 0 ]] && exec TERM='dumb' xdg-open "$LAUNCH_PAGE"
 	fi
 
 	return 0
@@ -313,7 +392,6 @@ EOF
 
 # And this is where all the fun happens.
 if [[ -n "$1" ]]; then
-	export WINEPREFIX="$HOME/.local/share/konaste"
 	if [[ "$1" == ${URI}://* ]]; then
 		echo "Detected login token for ${GAME_TITLE}: $1"
 		[[ $TERM != 'dumb' ]] && echo "Avoid passing login tokens directly to this script from a terminal emulator." 1>&2
@@ -357,9 +435,9 @@ if [[ -n "$1" ]]; then
 	fi
 else
 	if [[ $(locate_files; echo $?) -eq 0 ]]; then
-		echo "No arguments provided. Opening $LAUNCH_PAGE in a web browser..."
 		[[ ! $(command -v xdg-open) ]] && echo "This script requires xdg-open (xdg-utils) to open the launcher website for ${GAME_TITLE}." && exit 255
-		exec xdg-open "$LAUNCH_PAGE"
+		echo "No arguments provided. Opening $LAUNCH_PAGE in a web browser..."
+		exec xdg-open TERM='dumb' xdg-open "$LAUNCH_PAGE"
 	else
 		echo "${GAME_TITLE} was not found in ~/.local/share/konaste" 1>&2
 		$KDIALOG \
