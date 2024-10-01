@@ -384,7 +384,7 @@ EOF
 			--title "Installation Complete" \
 			--yesno "${GAME_TITLE} has been successfully installed. Would you like to open the launch page?" 2>/dev/null
 
-		[[ $? -eq 0 ]] && exec TERM='dumb' xdg-open "$LAUNCH_PAGE"
+		[[ $? -eq 0 ]] && exec env TERM='dumb' xdg-open "$LAUNCH_PAGE"
 	fi
 
 	return 0
