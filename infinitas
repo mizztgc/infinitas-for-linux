@@ -203,33 +203,40 @@ EOF
 	update-mime-database "$HOME/.local/share/mime"
 }
 
-# Installation function
-run_installer() {
-
-
-	create_icons() {
-		[[ -z $ICOTOOL ]] && return 1
-
-		# Get how many icons we need to create
-		local icon="$(find . -type f -name "${DIR_TITLE}.ico")"
-		local iconDir="$HOME/.local/share/icons/hicolor"
-		local numIcons=$($ICOTOOL -l "${icon}" | wc -l)
-		for i in $(seq 1 $numIcons); do
-			# Get the size of the icons
-			local size="$($ICOTOOL -i $i -l "${icon}" | cut -d' ' -f 3 | cut -d'=' -f 2)"
-
-			# Create the directory if necessary
-			[[ ! -e "${iconDir}/${size}x${size}/apps" ]] && mkdir -p "${iconDir}/${size}x${size}/apps" 2>/dev/null
-			[[ ! -e "${iconDir}/${size}x${size}/mimetypes" ]] && mkdir -p "${iconDir}/${size}x${size}/mimetypes" 2>/dev/null
-
-			# Now extract the icon
-			$ICOTOOL -i $i -x "${icon}" -o "${iconDir}/${size}x${size}/apps/${SIMPLE_NAME}.png"
-			$ICOTOOL -i $i -x "${icon}" -o "${iconDir}/${size}x${size}/mimetypes/x-scheme-handler-${URI}.png"
-		done
-
-	return
+create_icons() {
+	[[ -z $ICOTOOL ]] && return 1
+	[[ -z "${WINEPREFIX}" ]] && {
+		echo "Wineprefix at ${PREFIX_LOCATION} could not be found"
+		exit 2
 	}
 
+	[[ ! -f "${WINEPREFIX}/dosdevices/c:/Games/${DIR_TITLE}/${DIR_TITLE}.ico" ]] && {
+		echo "Unable to locate icon for ${GAME_TITLE}"
+		exit 3
+	}
+
+	# Get how many icons we need to create
+	local icon="$(find . -type f -name "${DIR_TITLE}.ico")"
+	local iconDir="$HOME/.local/share/icons/hicolor"
+	local numIcons=$($ICOTOOL -l "${icon}" | wc -l)
+	for i in $(seq 1 $numIcons); do
+		# Get the size of the icons
+		local size="$($ICOTOOL -i $i -l "${icon}" | cut -d' ' -f 3 | cut -d'=' -f 2)"
+
+		# Create the directory if necessary
+		[[ ! -e "${iconDir}/${size}x${size}/apps" ]] && mkdir -p "${iconDir}/${size}x${size}/apps" 2>/dev/null
+		[[ ! -e "${iconDir}/${size}x${size}/mimetypes" ]] && mkdir -p "${iconDir}/${size}x${size}/mimetypes" 2>/dev/null
+
+		# Now extract the icon
+		$ICOTOOL -i $i -x "${icon}" -o "${iconDir}/${size}x${size}/apps/${SIMPLE_NAME}.png"
+		$ICOTOOL -i $i -x "${icon}" -o "${iconDir}/${size}x${size}/mimetypes/x-scheme-handler-${URI}.png"
+	done
+
+	return
+}
+
+# Installation function
+run_installer() {
 	# Show a localization warning for the JP bros
 	if [[ "${LANG}" == ja_* || "${LANGUAGE}" == ja_* ]]; then
 		# Original string: Some dialog boxes you see during installation may not appear in Japanese. If necessary, you may need to use a machine translation utility to continue. Do you still want to install ${GAME_TITLE}?
@@ -397,6 +404,7 @@ run_installer() {
 
 # And this is where all the fun happens.
 if [[ -n "$1" ]]; then
+	# TODO: turn this into a case statement
 	if [[ "$1" == ${URI}://* ]]; then
 		echo "Detected login token for ${GAME_TITLE}: $1"
 		[[ $TERM != 'dumb' ]] && echo "Avoid passing login tokens directly to this script from a terminal emulator." 1>&2
@@ -436,6 +444,15 @@ if [[ -n "$1" ]]; then
 		run_installer; exit $?
 	elif [[ "$1" == 'fix-launcher' ]]; then
 		create_launcher; exit $?
+	elif [[ "$1" == 'fix-icons' ]]; then
+		locate_files
+		if [[ $? -eq 0 ]]; then
+			cd "${WINEPREFIX}/dosdevices/c:/"
+			create_icons; exit $?
+		else
+			echo "${GAME_TITLE} is not installed."
+			exit 1
+		fi
 	else
 		echo "Unrecognized argument $1" 1>&2
 		exit 1
