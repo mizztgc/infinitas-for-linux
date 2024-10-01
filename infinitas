@@ -54,6 +54,20 @@ locate_files() {
 run_game() {
 	declare -a PRELAUNCH_PARAMS=( )
 
+	# The e-amusement Cloud servers always go down daily between 5:00am-7:00am JST for maintenance.
+	# This is equivalent to 20:00-22:00 (8:00pm-10:00pm) UTC.
+	# The error message shown in this function will tell you when maintenance will end in your time zone.
+	if [[ $(date -u +%H) -ge 20 && $(date -u +%H) -lt 22 ]]; then
+		approx_time=$(printf '%(%l:%M%P %Z)T\n' "$(date +%s -u -d "22:00")")
+		if [[ "${approx_time:0:1}" == ' ' ]]; then
+			approx_time="${approx_time:1}"
+		fi
+		$KDIALOG \
+			--title "Maintenance Notice" \
+			--error "The e-amusement Cloud servers are currently down for maintenance.<br>Please wait until <strong>$approx_time</strong> and try again." 2>/dev/null
+		exit 255
+	fi
+
 	# Gamescope support
  	if [[ $IOL_GAMESCOPE -eq 1 || $IOL_GAMESCOPE -eq 2 ]]; then
  		if [[ -z $GAMESCOPE ]]; then
@@ -127,20 +141,6 @@ run_game() {
 
 	export WINEDLLOVERRIDES="mscoree"
 	export WINEDEBUG='fixme-all'
-
-	# The e-amusement Cloud servers always go down daily between 5:00am-7:00am JST for maintenance.
-	# This is equivalent to 20:00-22:00 (8:00pm-10:00pm) UTC.
-	# The error message shown in this function will tell you when maintenance will end in your time zone.
-	if [[ $(date -u +%H) -ge 20 && $(date -u +%H) -lt 22 ]]; then
-		approx_time=$(printf '%(%l:%M%P %Z)T\n' "$(date +%s -u -d "22:00")")
-		if [[ "${approx_time:0:1}" == ' ' ]]; then
-			approx_time="${approx_time:1}"
-		fi
-		$KDIALOG \
-			--title "Maintenance Notice" \
-			--error "The e-amusement Cloud servers are currently down for maintenance.<br>Please wait until <strong>$approx_time</strong> and try again." 2>/dev/null
-		exit 255
-	fi
 
 	# Detect Wayland and warn the user
 	if [[ $XDG_SESSION_TYPE == 'wayland' ]]; then
