@@ -2,7 +2,7 @@
 
 # Default variables
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-PREFIX_LOCATION="$HOME/.dotfiles/prefixes/konaste"
+PREFIX_LOCATION="$HOME/.local/share/konaste"
 export WINEPREFIX="${PREFIX_LOCATION}"
 
 # Game information
