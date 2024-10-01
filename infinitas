@@ -443,10 +443,18 @@ if [[ -n "$1" ]]; then
 		export WINEDLLOVERRIDES="mscoree;mshtml=d;ieframe=d"
 		run_installer; exit $?
 	elif [[ "$1" == 'fix-launcher' ]]; then
-		create_launcher; exit $?
+		create_launcher
+		if [[ -f "${WINEPREFIX}/${SIMPLE_NAME}" ]]; then
+			echo "Replacing launch script..."
+			cp -f "${SCRIPT_DIR}/$(basename -- $0)" "${WINEPREFIX}/${SIMPLE_NAME}"
+			chmod +x "${WINEPREFIX}/${SIMPLE_NAME}"
+		fi
+		echo "Done."
+		exit $?
 	elif [[ "$1" == 'fix-icons' ]]; then
 		locate_files
 		if [[ $? -eq 0 ]]; then
+			echo "Creating icons..."
 			cd "${WINEPREFIX}/dosdevices/c:/"
 			create_icons; exit $?
 		else
