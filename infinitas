@@ -469,7 +469,7 @@ else
 	if [[ $(locate_files; echo $?) -eq 0 ]]; then
 		[[ ! $(command -v xdg-open) ]] && echo "This script requires xdg-open (xdg-utils) to open the launcher website for ${GAME_TITLE}." && exit 255
 		echo "No arguments provided. Opening $LAUNCH_PAGE in a web browser..."
-		exec xdg-open TERM='dumb' xdg-open "$LAUNCH_PAGE"
+		exec xdg-open TERM='dumb' "$LAUNCH_PAGE"
 	else
 		echo "${GAME_TITLE} was not found in ~/.local/share/konaste" 1>&2
 		$KDIALOG \
