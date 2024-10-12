@@ -544,13 +544,14 @@ if [[ -n "$1" ]]; then
 	elif [[ "$1" == 'install' ]]; then
 		export WINEDLLOVERRIDES="mshtml=d;ieframe=d"
 		run_installer; exit $?
-	elif [[ "$1" == 'fix-launcher' ]]; then
-		create_launcher
+	elif [[ "$1" == 'update' ]]; then
 		if [[ -f "${WINEPREFIX}/${SIMPLE_NAME}" ]]; then
 			echo "Replacing launch script..."
 			cp -f "${SCRIPT_DIR}/$(basename -- $0)" "${WINEPREFIX}/${SIMPLE_NAME}"
 			chmod +x "${WINEPREFIX}/${SIMPLE_NAME}"
 		fi
+	elif [[ "$1" == 'fix-launcher' ]]; then
+		create_launcher
 		echo "Done."
 		exit $?
 	elif [[ "$1" == 'fix-icons' ]]; then
