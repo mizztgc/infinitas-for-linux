@@ -15,25 +15,22 @@ Like most online games today, getting banned for playing the game on GNU/Linux (
 
 This script is meant to be used for playing KONAMI's beatmania IIDX INFINITAS: a PC rhythm game based on their already established arcade franchise of the same name, using Wine. It can also be used as a base for launching other KONAMI Amusement Station Cloud (Konaste) games as well, such as SOUND VOLTEX EXCEED GEAR.
 
-The following environment variables are supported:
-* `IOL_GAMESCOPE`: Enable support for Valve's gamescope compositor. A value of 1 or 2 will enable gamescope.
-  * ***NVIDIA USERS:*** If you do intend on using gamescope, enable the `nvidia-drm.modeset=1` kernel parameter ***AND*** set this environment variable to a value of 2. Using a value of 1 WILL cause gamescope to core dump.
-* `IOL_NO_DXVK`: Disable the use of DXVK. If unset, or set to a value of 0, it will look for DXVK in `/usr/share/dxvk`.
-  * Only disable DXVK if your graphics card does not have good support for the Vulkan API, or you have issues with DXVK.
-* `IOL_NO_LOOPBACK`: If set to 1, this will not enable the PipeWire loopback device.
-  * ***WARNING: YOUR AUDIO SAMPLE RATE WITHIN PIPEWIRE MUST BE SET TO 44100Hz, OR YOU WILL NOT HAVE ANY SOUND!***
+This script is supposed to be easy to use and function in a similar way as if you were using Windows. It doesn't have fancy features, such as generating login tokens without the need of a web browser, or allowing the use of Linux utilities to improve performance/compatibility, such as custom builds of Wine and Valve's gamescope compositor (They *may* come soon, assuming I have the motivation to implement them).
 
 ## DEPENDENCIES:
 
-This script requires the following dependencies:
+This script requires the following dependencies: (**NOTE:** The dependency names listed here are their associated packages on Arch Linux. Your distribution may have these packages labeled differently, or may have the required dependencies separated in other packages.)
 
 * **Web browser of your choice** (Firefox, Chrome, etc.)
 * **wine>=9.0** (required; this is a game for Windows after all)
+* **wine-mono** (required; needed for the launcher's settings menu to function)
+  * If your distribution does not have wine-mono packaged, you must install the version of mono that's compatible with your build of Wine. You can learn how [here](https://gitlab.winehq.org/wine/wine/-/wikis/Wine-Mono).
 * **pipewire** (required; for sound)
 * **pipewire-pulse** (required; for sound)
   * Debian users may need to also install **pulseaudio-utils**
+* **pipewire-audio** (required; for sound)
 * **xdg-utils** (required; to handle the `bm2dxinf://` URI)
-* **kdialog** (required; for showing message boxes)
+* **zenity** (required; for showing message boxes)
 * **icoutils** (game install only; for creating icons)
 * **wget** (game install only; for downloading the installer)
 
@@ -46,3 +43,7 @@ cd infinitas-for-linux/
 chmod +x infinitas
 ./infinitas install
 ```
+
+**NOTE:** If you want to use the Flatpak build of Wine over a native build, run `./infinitas --flatpak install`. This should only be done if you use a stable distro that doesn't have Wine 9.0 like Debian 12.x, a Steam Deck, or if you really care about sandboxing. Despite the basic Flatpak support, this script was made without sandboxing in mind, so I cannot guarantee if the game will work.
+
+You will also need to install `org.winehq.Wine` from Flathub. Ensure the branch is `stable-23.08` or newer.
