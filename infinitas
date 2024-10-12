@@ -1,9 +1,32 @@
 #!/usr/bin/env bash
 
-# Default variables
+# Infinitas for Linux by Mizzt (mizztgc)
+
+# This is just a barebones script for installing and launching beatmania IIDX INFINITAS, and doesn't include
+# special features like custom prefixes/winebuilds, gamescope, etc. I did try to implement them, but I'm not a
+# fan of overcomplicating things, so I stripped them out.
+
+# And while I have you here, I would like to inform you that this script is unofficial. It's not endorsed,
+# supported, nor affiliated with KONAMI Amusement. This script will NOT grant you access to the full game
+# without an active basic course subscription to beatmania IIDX INFINITAS, nor will I allow you to do so (I
+# can't afford to have konmai sending the yakuza to my house). Due to the nature of Linux, getting banned from
+# the e-amusement Cloud network is a possibility, and I'm not to be held responsible should anything like that
+# happen.
+
+# Your system will need the following dependencies to use this script:
+# (all dependencies listed are the package names on Arch Linux. check your distro's package manager for the
+# relevant packages)
+# - wine>=9.0 (obviously!)
+# - pipewire
+# - pipewire-pulse
+#     !! Debian users may also need to install pulseaudio-utils for enabling the loopback device !!
+# - pipewire-audio
+# - wget
+# - xdg-utils
+# - zenity
+# - flatpak (only if you intend on using --flatpak)
+# - icoutils (optional)
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-PREFIX_LOCATION="$HOME/.local/share/konaste"
-export WINEPREFIX="${PREFIX_LOCATION}"
 
 # Game information
 GAME_TITLE='beatmania IIDX INFINITAS'
@@ -14,15 +37,21 @@ LAUNCH_PAGE="https://p.eagate.573.jp/game/infinitas/2/api/login/login.html"
 LAUNCHER_NAME='bm2dx_launcher'
 URI='bm2dxinf'
 
-KDIALOG="$(command -v kdialog)"
-ICOTOOL="$(command -v icotool)"
-PW_LOOPBACK="$(command -v pw-loopback)"
-WGET="$(command -v wget)"
-GAMEMODE="$(command -v gamemoderun)"
-GAMESCOPE="$(command -v gamescope)"
-WINE="$(command -v wine)"
-WINEBOOT="$(command -v wineboot)"
-WINESERVER="$(command -v wineserver)"
+# If --flatpak is passed to this script, run this script in a Flatpak container
+[[ $1 == '--flatpak' ]] && {
+	shift
+	echo "This script is running through a Flatpak container. Expect issues."
+
+	[[ ! -e $HOME/.local/share/applications ]] && mkdir -p $HOME/.local/share/applications
+	[[ ! -e $HOME/.local/share/icons/hicolor ]] && mkdir -p $HOME/.local/share/icons/hicolor
+	[[ ! -e $HOME/.local/share/mime ]] && mkdir -p $HOME/.local/share/mime
+
+	# Now this really do be a Flatpak moment...
+	declare -a flatpakArgs=( --filesystem=/tmp --filesystem=xdg-data/applications --filesystem=xdg-data/mime --filesystem=xdg-data/icons --filesystem=xdg-run/pipewire-0 --filesystem=host-os --env=PULSE_SINK='konaste' )
+	[[ -n "${WINEPREFIX}" ]] && flatpakArgs+=( --filesystem="${WINEPREFIX}" --env=WINEPREFIX="${WINEPREFIX}" )
+	exec $(command -v flatpak) run --command=/bin/bash ${flatpakArgs[@]} org.winehq.Wine -c "$0 $@"
+	exit $?
+}
 
 # Kill the script if being ran from a TTY
 if [[ $XDG_SESSION_TYPE != 'x11' && $XDG_SESSION_TYPE != 'wayland' ]]; then
@@ -30,8 +59,31 @@ if [[ $XDG_SESSION_TYPE != 'x11' && $XDG_SESSION_TYPE != 'wayland' ]]; then
 	exit 1
 fi
 
-# Kill the script if no dialog box handler is found
-[[ -z $KDIALOG ]] && echo "Unable to locate a binary for kdialog" && exit 1
+if [[ -z $WINEPREFIX || "$WINEPREFIX" == '/var/data/wine' ]]; then
+	if [[ -n $container && $container == 'flatpak' ]]; then
+		PREFIX_LOCATION="/var/data/konaste"
+		SCRIPT_PATH="$XDG_DATA_HOME/konaste/${SIMPLE_NAME} --flatpak"
+	else
+		PREFIX_LOCATION="$HOME/.local/share/konaste"
+		SCRIPT_PATH="${PREFIX_LOCATION}/${SIMPLE_NAME}"
+	fi
+
+	export WINEPREFIX="${PREFIX_LOCATION}"
+else
+	echo "WARNING: Using a prefix outside of the default is NOT recommended!" 1>&2
+	SCRIPT_PATH="${WINEPREFIX}/${SIMPLE_NAME}"
+fi
+
+#KDIALOG="$(command -v kdialog)"
+ICOTOOL="$(command -v icotool)"
+PW_LOOPBACK="$(command -v pw-loopback)"
+WGET="$(command -v wget)"
+WINE="$(command -v wine)"
+WINEBOOT="$(command -v wineboot)"
+WINESERVER="$(command -v wineserver)"
+ZENITY="$(command -v zenity)"
+
+[[ -z $ZENITY ]] && echo -e "\033[1;91mzenity is required for this script\033[0m" && exit 1
 
 # Function for locating the game files
 locate_files() {
@@ -52,8 +104,6 @@ locate_files() {
 
 # Game launch function
 run_game() {
-	declare -a PRELAUNCH_PARAMS=( )
-
 	# The e-amusement Cloud servers always go down daily between 5:00am-7:00am JST for maintenance.
 	# This is equivalent to 20:00-22:00 (8:00pm-10:00pm) UTC.
 	# The error message shown in this function will tell you when maintenance will end in your time zone.
@@ -62,112 +112,70 @@ run_game() {
 		if [[ "${approx_time:0:1}" == ' ' ]]; then
 			approx_time="${approx_time:1}"
 		fi
-		$KDIALOG \
-			--title "Maintenance Notice" \
-			--error "The e-amusement Cloud servers are currently down for maintenance.<br>Please wait until <strong>$approx_time</strong> and try again." 2>/dev/null
+		echo -e "The e-amusement Cloud servers are currently down for maintenance. Please wait until \033[1m$approx_time\033[0m and try again."
+		$ZENITY --error \
+			--title "Maintenance Reminder" \
+			--text "The e-amusement Cloud servers are currently down for maintenance.\nPlease wait until <b>$approx_time</b> and try again." 2>/dev/null
 		exit 255
 	fi
 
-	# Gamescope support
- 	if [[ $IOL_GAMESCOPE -eq 1 || $IOL_GAMESCOPE -eq 2 ]]; then
- 		if [[ -z $GAMESCOPE ]]; then
- 			echo "IOL_GAMESCOPE set to 1, but gamescope was not found on your system." 1>&2
- 		else
- 			echo "Enabling Gamescope..."
- 			PRELAUNCH_PARAMS+=( "${GAMESCOPE}" -w 1920 -h 1080 -r 120 --framerate-limit 120 -f )
-
- 			# If IOL_GS is set to 1, use the SDL backend for Gamescope
- 			# This is mainly a compatibility feature for those running NVIDIA GPUs, because of a
- 			# core dump issue.
- 			[[ $IOL_GS_NVIDIA -eq 1 ]] && PRELAUNCH_PARAMS+=( --backend sdl )
- 			PRELAUNCH_PARAMS+=( -- )
-
- 			# Gamescope will use the following parameters:
- 			# - Resolution (-w -h): 1920x1080
- 			# - Refresh rate (-r): 120Hz
- 			# - FPS limit (--framerate-limit): 120fps
- 			#    * this is needed because you may get
- 		fi
- 	fi
-
- 	# Disable DXVK
- 	if [[ -z $IOL_NO_DXVK || $IOL_NO_DXVK -eq 0 ]]; then
- 		# Use DXVK if found
- 		if [[ -d "${WINEPREFIX}/dosdevices/c:/dxvk" || -d /usr/share/dxvk ]]; then
- 			if [[ -d "${WINEPREFIX}/dosdevices/c:/dxvk" ]]; then
- 				DXVK_LOCATION="${WINEPREFIX}/dosdevices/c:/dxvk"
- 			else
- 				DXVK_LOCATION="/usr/share/dxvk"
- 			fi
-
- 			if [[ -f ${DXVK_LOCATION}/x32/d3d9.dll && -f ${DXVK_LOCATION}/x64/d3d9.dll ]]; then
-				echo "Located DXVK at ${DXVK_LOCATION}"
-				export WINEDLLPATH="${DXVK_LOCATION}/x32:${DXVK_LOCATION}/x64"
-				export DXVK_LOG_LEVEL='error'
-				export DXVK_FRAME_RATE=120
- 			else
-				echo "Unable to locate d3d9.dll in ${DXVK_LOCATION}" 1>&2
- 			fi
- 		else
- 			echo "Couldn't locate DXVK directory. Using built-in DirectX..." 1>&2
- 		fi
- 	else
- 		echo "Using built-in DirectX..."
- 	fi
-
-	# Disable loopback device (NOT RECOMMENDED!)
-	if [[ -z $IOL_NO_LOOPBACK || $IOL_NO_LOOPBACK -eq 0 ]]; then
-		if [[ -z $PW_LOOPBACK ]]; then
-			echo "No binary for 'pw-loopback' was found. The PipeWire loopback device will not be available."
-			echo "WARNING: Ensure your audio sample rate is set to 44100Hz, or you will have no sound!" 1>&2
-			$KDIALOG \
-				--title "Loopback Warning" \
-				--sorry "No binary for <code>pw-loopback</code> was found on your system. Infinitas for Linux requires <code>pw-loopback</code> for enabling a virtual output to ease any audio issues with little to no manual audio configuration. Unless your audio sample rate within PipeWire is already set to 44100Hz, <strong><em>you will not have any sound while playing ${GAME_TITLE}.</em></strong>" \
-				--dontagain "${WINEPREFIX}/.kdialog_ignore:no_pwLoopback" 2>/dev/null
- 		else
-			# Start PipeWire loopback device
-			echo "Starting PipeWire loopback device..."
-			$PW_LOOPBACK -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
-			export PULSE_SINK='konaste'
- 		fi
- 	else
- 		echo "PipeWire loopback device has been disabled."
- 		echo "WARNING: Ensure your audio sample rate is set to 44100Hz, or you will have no sound!" 1>&2
- 		$KDIALOG \
-			--title "Loopback Warning" \
-			--sorry "You have chosen to disable the PipeWire loopback device. Unless your audio sample rate within PipeWire is already set to 44100Hz, <strong><em>you will not have any sound while playing ${GAME_TITLE}.</em></strong>" \
-			--dontagain "${WINEPREFIX}/.kdialog_ignore:pwLoopbackDisabled" 2>/dev/null
- 	fi
-
-	export WINEDLLOVERRIDES="mscoree"
-	export WINEDEBUG='fixme-all'
-
-	# Detect Wayland and warn the user
+	# Show a wayland warning
 	if [[ $XDG_SESSION_TYPE == 'wayland' ]]; then
-		echo "Wayland detected; expect issues" 1>&2
+		echo "Wayland detected; expect problems"
+	
+		show_warn() {
+			echo "Displaying Wayland warning"
+			$ZENITY --warning \
+				--title "Wayland Warning" \
+				--width 512 \
+				--text "You appear to be playing through a Wayland session provided by $XDG_CURRENT_DESKTOP. Wayland has an issue where it only allows applications to use your currently set refresh rate. This can be a problem if your display's refresh rate is set to a value other than 60 or 120Hz.\n\nBefore clicking <b>OK</b>, ensure your refresh rate is currently set to 60Hz (or 120Hz if supported)." \
+				--extra-button="Don't Show Again" 2>/dev/null
 
-		# why the hell does this keep breaking the script
-# 		if [[ -n $KDIALOG ]]; then
-# 			$KDIALOG \
-# 			--title "Wayland Warning" \
-# 			--sorry "You appear to be utilizing a Wayland session provided by '"$XDG_CURRENT_DESKTOP"'. Wayland has a glaring issue of only exposing your current refresh rate to applications, which in turn, causes '"${GAME_TITLE}"' to fail the display initialization process if you are running a non-standard refresh rate, such as 75Hz, 144Hz, 165Hz, etc. Before clicking <strong>OK</strong>, ensure your refresh rate is set to 60Hz (or 120Hz if supported).' \
-# 			--dontagain "${WINEPREFIX}/.kdialog_ignore:waylandWarning" 2>/dev/null
+			if [[ $? -ne 0 ]]; then
+				[[ ! -f "${WINEPREFIX}/.noshow" ]] && touch "${WINEPREFIX}/.noshow" 2>/dev/null
+				echo "Adding 'waylandWarning' to ${WINEPREFIX}/.noshow"
+				echo 'waylandWarning' >> "${WINEPREFIX}/.noshow"
+			fi
+		}
+	
+		if [[ -f "${WINEPREFIX}/.noshow" ]]; then
+			if [[ ! $(cat "${WINEPREFIX}/.noshow" | grep -w 'waylandWarning') ]]; then
+				show_warn
+			fi
+		else
+			show_warn
+		fi
 	fi
 
-	# Alright, we're done here.
-	${WINESERVER} -p2
-	"${PRELAUNCH_PARAMS[@]}" ${WINE} start '/high' '/wait' "${LAUNCHER_EXECUTABLE}" "$LOGIN_TOKEN"
-	${WINESERVER} -w
+	# Loopback device
+	echo "Starting PipeWire loopback device..."
+	$PW_LOOPBACK -m '[ FL FR ]' -l 30 --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
+	export PULSE_SINK=konaste
+
+	sleep 1
+
+	# Start the game.
+	${WINE} start '/high' '/wait' "${LAUNCHER_EXECUTABLE}" "$LOGIN_TOKEN"
+	wineserver -w
+	echo -e "\n\033[1;95mThank you for playing...\033[0m\n"
 
 	sleep 1
 	kill -15 $(jobs -p)
-	# IIDX EMPRESS has a very goated credits song.
-	# don't @ me.
-	echo -e "\n\033[1;95mThank you for playing...\033[0m\n"
+	return $exc
 }
 
 create_launcher() {
-cat > "$HOME/.local/share/applications/${SIMPLE_NAME}.desktop" <<EOF
+	# TODO: export whatever WINEPREFIX is
+	if [[ -n $container && $container == 'flatpak' ]]; then
+		apps_folder="$XDG_DATA_HOME/applications"
+		mime_folder="$XDG_DATA_HOME/mime"
+	else
+		apps_folder="$HOME/.local/share/applications"
+		mime_folder="$HOME/.local/share/mime"
+	fi
+
+	[[ ! -e "${apps_folder}" ]] && mkdir -p "${apps_folder}" 2>/dev/null
+cat > "${apps_folder}/${SIMPLE_NAME}.desktop" <<EOF
 [Desktop Entry]
 Name=${GAME_TITLE}
 Type=Application
@@ -177,17 +185,17 @@ Icon=$SIMPLE_NAME
 Exec=xdg-open $LAUNCH_PAGE
 EOF
 
-cat > "$HOME/.local/share/applications/${SIMPLE_NAME}-launcher.desktop" <<EOF
+cat > "${apps_folder}/${SIMPLE_NAME}-launcher.desktop" <<EOF
 [Desktop Entry]
 Name=${GAME_TITLE} Launcher
 Type=Application
 Icon=$SIMPLE_NAME
-Exec=${WINEPREFIX}/${SIMPLE_NAME} %u
+Exec=${SCRIPT_PATH} %u
 MimeType=x-scheme-handler/$URI
 NoDisplay=true
 EOF
-	[[ ! -e "$HOME/.local/share/mime/packages" ]] && mkdir "$HOME/.local/share/mime/packages" 2>/dev/null
-cat > "$HOME/.local/share/mime/packages/x-scheme-handler-${URI}.xml" <<EOF
+	[[ ! -e "${mime_folder}/packages" ]] && mkdir -p "${mime_folder}/packages" 2>/dev/null
+cat > "${mime_folder}/packages/x-scheme-handler-${URI}.xml" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
     <mime-type type="x-scheme-handler/${URI}">
@@ -199,26 +207,47 @@ cat > "$HOME/.local/share/mime/packages/x-scheme-handler-${URI}.xml" <<EOF
 </mime-info>
 EOF
 
-	update-desktop-database "$HOME/.local/share/applications"
-	update-mime-database "$HOME/.local/share/mime"
+	if [[ -n $container && $container == 'flatpak' ]]; then
+		echo -e "Remember to run \033[1mupdate-desktop-database ~/.local/share/applications\033[0m on your host system to make the launcher available within your DE/WM!"
+	else
+		update-desktop-database "${apps_folder}"
+	fi
+	update-mime-database "${mime_folder}"
 }
 
 create_icons() {
+	if [[ -n $container && $container == 'flatpak' ]]; then
+		echo "Flatpak detected; attempting to locate icotool..."
+		if [[ -f /run/host/bin/icotool ]]; then
+			echo "Found icotool (icoutils) at /run/host/bin/icotool"
+			ICOTOOL="/run/host/bin/icotool"
+		else
+			$ZENITY --warning \
+				--title "Cannot create icons" \
+				--text "No binary for icotool (part of icoutils) was found on your host system. Without it, you will not be able to create icons for ${GAME_TITLE}."
+			return 1
+		fi
+
+		iconDir="$XDG_DATA_HOME/icons/hicolor"
+	else
+		iconDir="$HOME/.local/share/icons/hicolor"
+	fi
+
 	[[ -z $ICOTOOL ]] && return 1
 	[[ -z "${WINEPREFIX}" ]] && {
 		echo "Wineprefix at ${PREFIX_LOCATION} could not be found"
-		exit 2
+		return 2
 	}
 
 	[[ ! -f "${WINEPREFIX}/dosdevices/c:/Games/${DIR_TITLE}/${DIR_TITLE}.ico" ]] && {
 		echo "Unable to locate icon for ${GAME_TITLE}"
-		exit 3
+		return 3
 	}
 
 	# Get how many icons we need to create
 	local icon="$(find . -type f -name "${DIR_TITLE}.ico")"
-	local iconDir="$HOME/.local/share/icons/hicolor"
 	local numIcons=$($ICOTOOL -l "${icon}" | wc -l)
+	
 	for i in $(seq 1 $numIcons); do
 		# Get the size of the icons
 		local size="$($ICOTOOL -i $i -l "${icon}" | cut -d' ' -f 3 | cut -d'=' -f 2)"
@@ -236,26 +265,65 @@ create_icons() {
 }
 
 # Installation function
-run_installer() {
+run_installer() {	
+	install_dxvk() {
+		echo "Downloading DXVK..."
+		$WGET -t 3 "https://github.com/doitsujin/dxvk/releases/download/v2.4.1/dxvk-2.4.1.tar.gz"
+		if [[ $? -ne 0 ]]; then
+			echo "Failed to download DXVK archive" 1>&2
+			$ZENITY --question \
+				--title "Failed to download DXVK" \
+				--text "DXVK failed to download. Do you want to continue the installation without it?\n\n<b>WARNING:</b> This may leave ${GAME_TITLE} unplayable!" 2>/dev/null
+
+			[[ $? -ne 0 ]] && return 1
+		else
+			# Make backups of the old DirectX 9.0 DLLs
+			echo "Making backups of existing .dll files..."
+			mv -v windows/syswow64/d3d9.dll windows/syswow64/d3d9.dll.old
+			mv -v windows/system32/d3d9.dll windows/system32/d3d9.dll.old
+
+			# Extract the files from the DXVK archive
+			echo "Extracting DXVK archive..."
+			tar -zxf dxvk-*.tar.gz
+			mv dxvk-*/ dxvk
+
+			# Move the new .dlls to the windows directory (actually, just copy them)
+			echo "Moving DXVK library to windows directory..."
+			cp -v dxvk/x32/d3d9.dll windows/syswow64/d3d9.dll
+			cp -v dxvk/x64/d3d9.dll windows/system32/d3d9.dll
+
+			# Add the registry key
+			$WINE reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d9' /t 'REG_SZ' /d 'native,builtin' /f '/reg:64' 2>/dev/null
+		fi
+
+		return 0
+	}
+
 	# Show a localization warning for the JP bros
 	if [[ "${LANG}" == ja_* || "${LANGUAGE}" == ja_* ]]; then
-		# Original string: Some dialog boxes you see during installation may not appear in Japanese. If necessary, you may need to use a machine translation utility to continue. Do you still want to install ${GAME_TITLE}?
+		# Original string: Some dialog boxes you may see while using this script may not appear in Japanese. If necessary, you may need to use a machine translation utility to proceed. Do you still want to continue with the installation of ${GAME_TITLE}?
 		echo "Showing localization warning"
-		$KDIALOG \
+		# the LANG env variable is important because running in flatpak mode will just kill this script
+		LANG=C.UTF-8 $ZENITY --question \
 			--title "インストールの警告" \
-			--warningyesno 'インストール中に表示されるダイアログ ボックスの一部は日本語で表示されない場合があります。必要に応じて、機械翻訳ユーティリティを使用して続行する必要があります。<br><br><strong>'"${GAME_TITLE}"' をインストールしますか?</strong>' \
-			--yes-label 'はい' \
-			--no-label 'いいえ' 2>/dev/null
+			--text "このスクリプトの使用中に表示されるダイアログボックスの中には、日本語で表示されないものもあります。必要であれば、機械翻訳ユーティリティを使用してください。\n\nこのまま<b>${GAME_TITLE}</b>のインストールを続けますか？" \
+			--ok-label='はい(Y)' \
+			--cancel-label='いいえ(N)' 2>/dev/null
 		if [[ $? -ne 0 ]]; then
 			exit 1
 		fi
 	fi
 
+	LC_ALL=C
+	LC=C
+	export LANG=C.UTF-8
+	
 	echo "Showing disclaimer"
 	# Disclaimer
-	$KDIALOG \
+	$ZENITY --question \
 		--title "DISCLAIMER" \
-		--warningyesno 'Infinitas for Linux is in no way affiliated with, endorsed, nor supported by KONAMI Amusement. It is meant to be used as a way to allow Linux users to play '"${GAME_TITLE}"' on Linux with minimal tweaks. This script does NOT contain any functionality for bypassing any restrictions pertaining to the e-amusement Cloud network, nor does the script developer have any intentions of implementing such features.<br><br>In order to play '"${GAME_TITLE}"' outside of trial mode, an active KONAMI ID is required, as well as the basic course subscription (¥1628/month) associated with it.<br><br>Like many online games today, it is possible to receive bans from the developers for accessing their game outside of what they support. While this script attempts to play it safe with the amount of tweaks to get the game running, the unlikely chance of receiving a ban is possible. Should any ban occur, the script developer is not to be held responsible. <em>Play at your own risk</em>.<br><br><strong>Proceed with installation?</strong>' 2>/dev/null
+		--width 600 \
+		--text "Infinitas for Linux is in no way affiliated with, endorsed, nor supported by KONAMI Amusement. It is meant to be used as a way to allow Linux users to play ${GAME_TITLE} on Linux with minimal tweaks. This script does NOT contain any functionality for bypassing any restrictions pertaining to the e-amusement Cloud network, nor does the script developer have any intentions of implementing such features.\n\nIn order to play ${GAME_TITLE} outside of trial mode, an active KONAMI ID is required, as well as the basic course subscription (¥1628/month) associated with it.\n\nLike many online games today, it is possible to receive bans from the developers for accessing their game outside of what they support. While this script attempts to play it safe with the amount of tweaks to get the game running, the unlikely chance of receiving a ban is possible. Should any ban occur, the script developer is not to be held responsible. <i>Play at your own risk</i>.\n\n<b>Proceed with installation?</b>" 2>/dev/null
 
 	if [[ $? -eq 1 ]]; then
 		echo "Quitting installer..." 1>&2
@@ -264,9 +332,15 @@ run_installer() {
 
 	# Locate files
 	if [[ $(locate_files; echo $?) -eq 0 ]]; then
-		$KDIALOG \
-			--title "Failed to install ${GAME_TITLE}" \
-			--error "Installation of ${GAME_TITLE} cannot proceed as existing files were found within the Wineprefix. If you are reinstalling ${GAME_TITLE}, delete the '${DIR_TITLE}' directory within ${PREFIX_LOCATION}." 2>/dev/null
+		if [[ -n $container && $container == 'flatpak' ]]; then
+			$ZENITY --error \
+				--title "Failed to install ${GAME_TITLE}" \
+				--text "Installation of ${GAME_TITLE} cannot proceed as existing files were found within the Wineprefix. If you are reinstalling ${GAME_TITLE}, delete the <b>${DIR_TITLE}</b> directory within <b>/home/$(whoami)/.var/app/org.winehq.Wine/data/konaste.</b>" 2>/dev/null
+		else
+			$ZENITY --error \
+				--title "Failed to install ${GAME_TITLE}" \
+				--text "Installation of ${GAME_TITLE} cannot proceed as existing files were found within the Wineprefix. If you are reinstalling ${GAME_TITLE}, delete the '${DIR_TITLE}' directory within ${WINEPREFIX}." 2>/dev/null
+		fi
 
 		exit 5
 	else
@@ -276,9 +350,15 @@ run_installer() {
 	# Check dependencies
 	if [[ -z $WINE ]]; then
 		echo "Unable to locate binary for wine" 1>&2
-		$KDIALOG \
-			--title "Missing dependencies" \
-			--error "The installer was unable to find a binary for Wine. Please install it from your distribution's package manager." 2>/dev/null
+		if [[ $container == 'flatpak' ]]; then
+			$ZENITY --error \
+				--title "Missing dependencies" \
+				--text "The installer was unable to find a binary for Wine. Please make sure you are running this script through the Wine Flatpak runtime." 2>/dev/null
+		else
+			$ZENITY --error \
+				--title "Missing dependencies" \
+				--text "The installer was unable to find a binary for Wine. Please install it from your distribution's package manager." 2>/dev/null
+		fi
 		exit 10
 	else
 		# Check Wine version
@@ -286,51 +366,53 @@ run_installer() {
 		local v="$($WINE --version | cut -d'-' -f2 | cut -d'.' -f1)"
 		if [[ $v -lt 9 ]]; then
 			echo "Out of date version of Wine detected"
-			$KDIALOG \
+			$ZENITY --error \
 				--title "Outdated Wine build detected!" \
-				--error "Your version of Wine ( $($WINE --version) ) is not compatible with this script.\nThis script requires a build of Wine based on version 9.0 or later." 2>/dev/null
+				--text "Your version of Wine <b>( $($WINE --version) )</b> is not compatible with this script.\nThis script requires a build of Wine based on version 9.0 or later." 2>/dev/null
 			exit 11
 		fi
 	fi
 	echo "Found wine (${WINE})"
 
-	[[ -z $WGET ]] && {
-		echo "Unable to locate binary for wget" 1>&2
-		$KDIALOG \
-			--title "Missing dependencies" \
-			--error "The installer was unable to find a binary for wget. Please install it from your distribution's package manager." 2>/dev/null
-		exit 12
-	}
-	echo "Found wget (${WGET})"
+	if [[ -z $container || $container != 'flatpak' ]]; then
+		[[ -z $WGET ]] && {
+			echo "Unable to locate binary for wget" 1>&2
+			$ZENITY --error \
+				--title "Missing dependencies" \
+				--text "The installer was unable to find a binary for wget. Please install it from your distribution's package manager." 2>/dev/null
+			exit 12
+		}
+		echo "Found wget (${WGET})"
 
-	if [[ -z $ICOTOOL ]]; then
-		echo "Unable to locate binary for icotool" 1>&2
-		$KDIALOG \
-			--title "Missing dependencies" \
-			--sorry "The installer was unable to find a binary for icotool (icoutils). You will not be able to generate icons for ${GAME_TITLE}." 2>/dev/null
-	else
-		echo "Found icoutils (${ICOTOOL})"
-	fi
+		if [[ -z $ICOTOOL ]]; then
+			echo "Unable to locate binary for icotool" 1>&2
+			$ZENITY --warning \
+				--title "Missing dependencies" \
+				--text "The installer was unable to find a binary for icotool (icoutils). You will not be able to generate icons for ${GAME_TITLE}." 2>/dev/null
+		else
+			echo "Found icoutils (${ICOTOOL})"
+		fi
 
-	if [[ -z $PW_LOOPBACK ]]; then
-		echo "Unable to locate binary for pw-loopback" 1>&2
-		$KDIALOG \
-			--title "Missing dependencies" \
-			--error "The installer was unable to find a binary for pw-loopback, part of pipewire-audio. Please install it from your distribution's package manager." 2>/dev/null
-		exit 12
+		if [[ -z $PW_LOOPBACK ]]; then
+			echo "Unable to locate binary for pw-loopback" 1>&2
+			$ZENITY --error \
+				--title "Missing dependencies" \
+				-text "The installer was unable to find a binary for pw-loopback, part of pipewire-audio." 2>/dev/null
+			exit 12
+		fi
+		echo "Found pw-loopback (${PW_LOOPBACK})"
 	fi
-	echo "Found pw-loopback (${PW_LOOPBACK})"
 
 	# Now that all dependencies are in order, it's time to get started.
-	if [[ -e "${PREFIX_LOCATION}" && -d "${PREFIX_LOCATION}" ]]; then
-		if [[ -f "${PREFIX_LOCATION}/system.reg" ]]; then
+	if [[ -e "${WINEPREFIX}" && -d "${WINEPREFIX}" ]]; then
+		if [[ -f "${WINEPREFIX}/system.reg" ]]; then
 			echo "Existing Wineprefix detected, expect problems."
 			$WINEBOOT -u 2>/dev/null
 		else
 			$WINEBOOT -i 2>/dev/null
 		fi
 	else
-		mkdir -p "${PREFIX_LOCATION}"
+		mkdir -p "${WINEPREFIX}"
 		$WINEBOOT -i 2>/dev/null
 	fi
 
@@ -340,43 +422,60 @@ run_installer() {
 	echo "Downloading installer for ${GAME_TITLE}"
 	$WGET -t 3 "$INSTALLER_LINK"
 	if [[ $? -ne 0 ]]; then
-		echo "Failed to download installer for ${GAME_TITLE}"
-		$KDIALOG \
+		echo "Failed to download installer for ${GAME_TITLE}" 1>&2
+		$ZENITY --error \
 			--title "Installation failed!" \
-			--error "Unable to download installer for ${GAME_TITLE}" 2>/dev/null
+			--text "Unable to download installer for ${GAME_TITLE}" 2>/dev/null
 		exit 15
 	fi
 
 	# Run the installer
 	echo "Running installer for ${GAME_TITLE}"
 	echo "NOTE: All CJK characters may render as boxes. This is due to the Wineprefix not having any CJK fonts available."
+	$ZENITY --warning \
+		--title "Running ${GAME_TITLE} Installer" \
+		--text "The installer for ${GAME_TITLE} will now open. Aside from this step requiring manual intervention, you may notice all Japanese characters being rendered as boxes. This is due to the Wineprefix not having the needed variables/fonts for rendering such characters.\n\nClicking <b>OK</b> will execute the installer."
 	$WINE msiexec '/i' $(basename -- $INSTALLER_LINK) '/L*' "Z:\\\\tmp\\\\${SIMPLE_NAME}_install.log"
 	case $? in
 		1)
-			$KDIALOG \
+			$ZENITY --error \
 				--title "Installation failed!" \
-				--error "The ${GAME_TITLE} installer was terminated unexpectedly." 2>/dev/null
+				--text "The ${GAME_TITLE} installer was terminated unexpectedly." 2>/dev/null
 			exit 16
 			;;
 		66)
-			$KDIALOG \
+			$ZENITY --error \
 				--title "Installation failed!" \
-				--error "The ${GAME_TITLE} installer was cancelled" 2>/dev/null
+				--text "The ${GAME_TITLE} installer was cancelled" 2>/dev/null
 			exit 17
 			;;
 		67)
-			$KDIALOG \
+			$ZENITY --error \
 				--title "Installation failed!" \
-				--error 'The '"${GAME_TITLE}"' installer failed to install. Check <code>/tmp/'"${SIMPLE_NAME}"'_install.log</code> to find out what happened.' 2>/dev/null
+				--text 'The '"${GAME_TITLE}"' installer failed to install. Check <code>/tmp/'"${SIMPLE_NAME}"'_install.log</code> to find out what happened.' 2>/dev/null
 			exit 18
 			;;
 	esac
 
+	# Prompt to install DXVK (recommended)
+	if [[ -z $container || $container != 'flatpak' ]]; then
+		$ZENITY --question \
+			--title "Install DXVK?" \
+			--text "DXVK is a specialized library for translating DirectX API calls to Vulkan, which is mostly used for playing games under Linux. While it is not required to play ${GAME_TITLE}, it is HIGHLY RECOMMENDED that you install it.\n\n<b>Would you like to install DXVK?</b>" 2>/dev/null
+		if [[ $? -eq 0 ]]; then
+			echo "Running install_dxvk()..."
+			install_dxvk
+		fi
+	else
+		# Not installing DXVK results in the game failing to initialize a device on Flatpak, so obviously this is going to be required.
+		echo "Flatpak detected; running install_dxvk()..."
+		install_dxvk
+	fi
+
 	# Set keys
 	echo "Setting additional registry keys..."
-	$WINE reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' 2>/dev/null
-	$WINE reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null
-	$WINE reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d9' /t 'REG_SZ' /d 'native,builtin' /f '/reg:64' 2>/dev/null
+	$WINE reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' 2>/dev/null	# Attempt to force 120Hz...
+	$WINE reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' 2>/dev/null				# Use xrandr on Xorg to force set the resolution
 
 	# Create launcher and mimetype
 	echo "Creating launcher and mimetype for ${GAME_TITLE}..."
@@ -392,9 +491,9 @@ run_installer() {
 
 	echo "Installation complete!"
 	if [[ -z "$LOGIN_TOKEN" ]]; then
-		$KDIALOG \
+		$ZENITY --question \
 			--title "Installation Complete" \
-			--yesno "${GAME_TITLE} has been successfully installed. Would you like to open the launch page?" 2>/dev/null
+			--text "${GAME_TITLE} has been successfully installed. Would you like to open the launch page?" 2>/dev/null
 
 		[[ $? -eq 0 ]] && exec env TERM='dumb' xdg-open "$LAUNCH_PAGE"
 	fi
@@ -416,31 +515,34 @@ if [[ -n "$1" ]]; then
 				;;
 			1|2|3|4)
 				echo "${GAME_TITLE} was not found in default prefix location" 1>&2
-				$KDIALOG \
-					--title "Failed to launch ${GAME_TITLE}" \
-					--warningyesno "${GAME_TITLE} is not installed on your system.\nWould you like to install it?" 2>/dev/null
+				$ZENITY --question \
+					--title "Not installed" \
+					--text "${GAME_TITLE} is not installed on your system.\nWould you like to install it?" 2>/dev/null
 				if [[ $? -eq 0 ]]; then
+					export WINEDLLOVERRIDES="mshtml=d;ieframe=d"
 					run_installer
-					# Run game if a login token was already provided
-					[[ $? -eq 0 ]] && run_game; exit $?
+					if [[ $? -eq 0 ]]; then
+						run_game
+					fi
+					exit
 				fi
 				exit 20
 				;;
 			5|6)
-				$KDIALOG \
+				$ZENITY --error \
 					--title "Failed to launch ${GAME_TITLE}" \
-					--error "Unable to locate installation and/or resource directory for ${GAME_TITLE} within Wineprefix" 2>/dev/null
+					--text "Unable to locate installation and/or resource directory for ${GAME_TITLE} within Wineprefix" 2>/dev/null
 				exit 21
 				;;
 			7)
-				$KDIALOG \
+				$ZENITY --error \
 					--title "Failed to launch ${GAME_TITLE}" \
-					--error "Unable to locate launcher for ${GAME_TITLE} within Wineprefix" 2>/dev/null
+					--text "Unable to locate launcher for ${GAME_TITLE} within Wineprefix" 2>/dev/null
 				exit 22
 				;;
 		esac
 	elif [[ "$1" == 'install' ]]; then
-		export WINEDLLOVERRIDES="mscoree;mshtml=d;ieframe=d"
+		export WINEDLLOVERRIDES="mshtml=d;ieframe=d"
 		run_installer; exit $?
 	elif [[ "$1" == 'fix-launcher' ]]; then
 		create_launcher
@@ -462,23 +564,28 @@ if [[ -n "$1" ]]; then
 			exit 1
 		fi
 	else
-		echo "Unrecognized argument $1" 1>&2
+		echo -e "usage: $0 [--flatpak] [install|fix-launcher|fix-icons]\nproviding a ${URI}://* URI will start the launcher if installed" 1>&2
 		exit 1
 	fi
 else
-	if [[ $(locate_files; echo $?) -eq 0 ]]; then
-		[[ ! $(command -v xdg-open) ]] && echo "This script requires xdg-open (xdg-utils) to open the launcher website for ${GAME_TITLE}." && exit 255
-		echo "No arguments provided. Opening $LAUNCH_PAGE in a web browser..."
-		exec xdg-open TERM='dumb' "$LAUNCH_PAGE"
-	else
-		echo "${GAME_TITLE} was not found in ~/.local/share/konaste" 1>&2
-		$KDIALOG \
-			--title "Not installed" \
-			--warningyesno "${GAME_TITLE} is not installed on your system.\nWould you like to install it?" 2>/dev/null
-		if [[ $? -eq 0 ]]; then
-			run_installer; exit $?
-		fi
-
+	if [[ $TERM != 'dumb' ]]; then
+		echo -e "usage: $0 [--flatpak] [install|fix-launcher|fix-icons]\nproviding a ${URI}://* URI will start the launcher if installed" 1>&2
 		exit 1
+	else
+		if [[ $(locate_files; echo $?) -eq 0 ]]; then
+			[[ ! $(command -v xdg-open) ]] && echo "This script requires xdg-open (xdg-utils) to open the launcher website for ${GAME_TITLE}." && exit 255
+			echo "No arguments provided. Opening $LAUNCH_PAGE in a web browser..."
+			exec xdg-open TERM='dumb' "$LAUNCH_PAGE"
+		else
+			echo "${GAME_TITLE} was not found in ${PREFIX_LOCATION}" 1>&2
+			$ZENITY --question \
+				--title "Not installed" \
+				--text "${GAME_TITLE} is not installed on your system. Would you like to install it?" 2>/dev/null
+			if [[ $? -eq 0 ]]; then
+				run_installer; exit $?
+			fi
+
+			exit 1
+		fi
 	fi
 fi
