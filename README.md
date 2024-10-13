@@ -33,8 +33,7 @@ This script requires the following dependencies: (**NOTE:** The dependency names
 * **zenity** (required; for showing message boxes)
 * **icoutils** (game install only; for creating icons)
 * **wget** (game install only; for downloading the installer)
-
-As of right now, the Flatpak build of Wine is unsupported.
+* **flatpak** (optional; only required if `--flatpak` is passed to this script)
 
 ## HOW TO INSTALL:
 ```
