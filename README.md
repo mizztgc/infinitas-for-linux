@@ -3,6 +3,8 @@ An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Ba
 
 Be sure to check out the [wiki](https://github.com/mizztgc/infinitas-for-linux/wiki) and [Known Issues](https://github.com/mizztgc/infinitas-for-linux/wiki/Known-Issues) for some helpful information
 
+**※ (DeepL) 日本のユーザー: このリポジトリはほとんど英語で書かれています。必要に応じて、このスクリプトが何をするのかを理解し、どのような問題が発生するのかを理解するために、機械翻訳ユーティリティの助けが必要になるかもしれません。**
+
 ## DISCLAIMER:
 
 This script is in no way affiliated with, endorsed, nor supported by KONAMI. In order to access the full game outside of trial mode, you must be subscribed to the beatmania IIDX INFINITAS Basic Course. This script will NOT allow you to gain access to things you aren't paying for, nor will the script developer assist you with such actions.
