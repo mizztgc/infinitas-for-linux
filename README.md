@@ -1,5 +1,5 @@
 # Infinitas for Linux
-An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash
+An unofficial method of playing beatmania IIDX INFINITAS (and other Konaste games) on Linux, written in Bash
 
 **※ (DeepL) 日本のユーザー: このリポジトリはほとんど英語で書かれています。必要に応じて、このスクリプトが何をするのかを理解し、どのような問題が発生するのかを理解するために、機械翻訳ユーティリティの助けが必要になるかもしれません。**
 
