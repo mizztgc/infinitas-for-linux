@@ -26,6 +26,14 @@
 # - zenity
 # - flatpak (only if you intend on using --flatpak)
 # - icoutils (optional)
+
+# TODO:
+# - (re)add the ability to use a custom build of wine
+# - learn japanese to help the JP bros use this script
+# - split this code into two scripts: one for installation, and one for launching
+# - allow for disabling the loopback device
+# - more error handling garbage (eugh...)
+
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # Game information
@@ -224,7 +232,7 @@ create_icons() {
 		else
 			$ZENITY --warning \
 				--title "Cannot create icons" \
-				--text "No binary for icotool (part of icoutils) was found on your host system. Without it, you will not be able to create icons for ${GAME_TITLE}."
+				--text "No binary for icotool (part of icoutils) was found on your host system. Without it, you will not be able to create icons for ${GAME_TITLE}." 2>/dev/null
 			return 1
 		fi
 
@@ -397,7 +405,7 @@ run_installer() {
 			echo "Unable to locate binary for pw-loopback" 1>&2
 			$ZENITY --error \
 				--title "Missing dependencies" \
-				-text "The installer was unable to find a binary for pw-loopback, part of pipewire-audio." 2>/dev/null
+				--text "The installer was unable to find a binary for pw-loopback, part of pipewire-audio. Please install it from your distribution's package manager." 2>/dev/null
 			exit 12
 		fi
 		echo "Found pw-loopback (${PW_LOOPBACK})"
@@ -407,13 +415,29 @@ run_installer() {
 	if [[ -e "${WINEPREFIX}" && -d "${WINEPREFIX}" ]]; then
 		if [[ -f "${WINEPREFIX}/system.reg" ]]; then
 			echo "Existing Wineprefix detected, expect problems."
+			$ZENITY --question \
+				--title "Existing prefix detected!" \
+				--text "The installer has detected that a prefix at ${WINEPREFIX} already exists. Installing ${GAME_TITLE} may break other applications that run within this prefix. Do you still want to continue?"  2>/dev/null
+
+			if [[ $? -ne 0 ]]; then
+				echo "Installation cancelled. Quitting installer..." 1>&2
+				exit 1
+			fi
+
 			$WINEBOOT -u 2>/dev/null
 		else
 			$WINEBOOT -i 2>/dev/null
 		fi
 	else
 		mkdir -p "${WINEPREFIX}"
-		$WINEBOOT -i 2>/dev/null
+		if [[ $? -ne 0 ]]; then
+			$ZENITY --error \
+				--title "Failed to create prefix" \
+				--text "The installer was unable to create a Wineprefix at <b>${WINEPREFIX}</b>. Check to see if this directory exists, and make sure you have permissions to not only read from it, but also write to it."  2>/dev/null
+			exit 1
+		else
+			$WINEBOOT -i 2>/dev/null
+		fi
 	fi
 
 	cd "${WINEPREFIX}/dosdevices/c:/"
@@ -434,7 +458,7 @@ run_installer() {
 	echo "NOTE: All CJK characters may render as boxes. This is due to the Wineprefix not having any CJK fonts available."
 	$ZENITY --warning \
 		--title "Running ${GAME_TITLE} Installer" \
-		--text "The installer for ${GAME_TITLE} will now open. Aside from this step requiring manual intervention, you may notice all Japanese characters being rendered as boxes. This is due to the Wineprefix not having the needed variables/fonts for rendering such characters.\n\nClicking <b>OK</b> will execute the installer."
+		--text "The installer for ${GAME_TITLE} will now open. Aside from this step requiring manual intervention, you may notice all Japanese characters being rendered as boxes. This is due to the Wineprefix not having the needed variables/fonts for rendering such characters. Clicking <b>OK</b> will execute the installer.\n\nIt is <b><i>HIGHLY RECOMMENDED</i></b> to use the default options as to not break this script!" 2>/dev/null
 	$WINE msiexec '/i' $(basename -- $INSTALLER_LINK) '/L*' "Z:\\\\tmp\\\\${SIMPLE_NAME}_install.log"
 	case $? in
 		1)
