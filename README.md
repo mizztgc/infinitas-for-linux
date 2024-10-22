@@ -1,8 +1,6 @@
 # Infinitas for Linux
 An unofficial method of playing beatmania IIDX INFINITAS on Linux, written in Bash
 
-Be sure to check out the [wiki](https://github.com/mizztgc/infinitas-for-linux/wiki) and [Known Issues](https://github.com/mizztgc/infinitas-for-linux/wiki/Known-Issues) for some helpful information
-
 **※ (DeepL) 日本のユーザー: このリポジトリはほとんど英語で書かれています。必要に応じて、このスクリプトが何をするのかを理解し、どのような問題が発生するのかを理解するために、機械翻訳ユーティリティの助けが必要になるかもしれません。**
 
 ## DISCLAIMER:
@@ -45,6 +43,39 @@ chmod +x infinitas
 ./infinitas install
 ```
 
-**NOTE:** If you want to use the Flatpak build of Wine over a native build, run `./infinitas --flatpak install`. This should only be done if you use a stable distro that doesn't have Wine 9.0 like Debian 12.x, a Steam Deck, or if you really care about sandboxing. Despite the basic Flatpak support, this script was made without sandboxing in mind, so I cannot guarantee if the game will work.
+**NOTE:** If you want to use the Flatpak build of Wine over a native build, run `./infinitas --flatpak install`. This should only be done if you use a stable distro that doesn't have Wine 9.0 like Debian 12.x, if you run a Steam Deck, or if you really care about sandboxing. Despite the basic Flatpak support, this script was made without sandboxing in mind, so I cannot guarantee if the game will work.
 
 You will also need to install `org.winehq.Wine` from Flathub. Ensure the branch is `stable-23.08` or newer.
+
+## KNOWN ISSUES
+Due to the nature of Linux, you may encounter issues that aren't present on Windows. Some of the issues are documented below:
+
+### The launcher's settings menu doesn't open
+Your Wineprefix is missing `wine-mono`. Install it from your distribution's package manager, or click "install" when prompted if using a custom build. If `wine-mono` is not available from your distribution's package manager, you must install it manually. See [this page](https://gitlab.winehq.org/wine/wine/-/wikis/Wine-Mono) for instructions on how to do so.
+
+Also, when installing the appropriate mono package for your build of Wine, you should also export WINEPREFIX to the location of the prefix that contains the beatmania IIDX INFINITAS game data (ex. `$ WINEPREFIX="$HOME/.local/share/konaste" wine /path/to/wine-mono-*-x86.msi`)
+
+### Fonts in the launcher's settings menu rendering as boxes
+This is because the Wineprefix doesn't have any CJK (Chinese/Japanese/Korean) fonts to display. Until I find a fix for this, your best bet is to use `winetricks` to download and install the necessary fonts.
+
+### Black screen when the game launches
+If you launch the game and you've been stuck on a black screen for a while, try alt-tabbing to see if there's an error message hidden behind the game window. This error message is supposed to indicate that the game couldn't find a suitable audio device and must close. The cause for this issue is due to your WASAPI audio mode set to 排他モード (Exclusive mode), which Wine does not support, but it can be fixed by setting it to 共有モード (Shared mode).
+
+### Game fails to start with 5-1501-0003 error
+You will mostly encounter this issue if you play in a Wayland session. Due to Wayland's behavior, it will only expose your currently set refresh rate to all applications, which causes beatmania IIDX INFINITAS to not be able to find a suitable display mode. It can become annoying if you have a display that natively outputs at 75Hz, 90Hz, etc.
+
+To fix this issue, set your refresh rate to either 60Hz or 120Hz if supported. You can optionally switch to a 16:9 resolution if you can't stand the game being stretched to fill your screen. Alternatively, you can play in an Xorg (X11) session, which will allow the game to automatically set your resolution and refresh rate.
+
+### The game crashes after the KONAMI/e-amusement/BEMANI splash screens
+This issue is caused by gstreamer not having access to any H.264 plugins on your system. If you run Ubuntu or any of its derivatives like Linux Mint, make sure you install the third-party multimedia codecs if you didn't do so when first installing your OS.
+
+### Some songs have delayed keysounds
+This is speculated to be due to a new audio container used for the newer beatmania IIDX versions since HEROIC VERSE. As of right now, there seems to be no fix for this. Unless you actively play the songs from Rootage and earlier, as well as the INFINITAS exclusive ones (which seem to also use the older audio container from my observations), this might be a deal breaker for you.
+
+### Some songs that use overlays crash the game
+As of right there, there is no fix for this, other than to disable the BGA in the advanced song options menu.
+
+***
+# Special thanks
+* [This Reddit thread](https://www.reddit.com/r/bemani/comments/yardc2/anyone_run_their_konasute_infinitas_sdvx_etc/) [(this comment specifically)](https://www.reddit.com/r/bemani/comments/yardc2/comment/ke5z7mi/)
+* [Bombergirl on Linux](https://rentry.org/bombergirl-linux) guide
