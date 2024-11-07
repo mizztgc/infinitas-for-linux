@@ -115,18 +115,29 @@ run_game() {
 	# The e-amusement Cloud servers always go down daily between 5:00am-7:00am JST for maintenance.
 	# This is equivalent to 20:00-22:00 (8:00pm-10:00pm) UTC.
 	# The error message shown in this function will tell you when maintenance will end in your time zone.
-	if [[ $(date -u +%H) -ge 20 && $(date -u +%H) -lt 22 ]]; then
+	cHour="$(date -u +%H)"
+	if [[ $cHour -ge 19 && $cHour -lt 22 ]]; then
 		approx_time=$(printf '%(%l:%M%P %Z)T\n' "$(date +%s -u -d "22:00")")
-		if [[ "${approx_time:0:1}" == ' ' ]]; then
-			approx_time="${approx_time:1}"
+
+		if [[ $cHour -ge 20 && $cHour -lt 22 ]]; then
+			echo -e "The e-amusement Cloud servers are currently down for maintenance. Please wait until \033[1m$approx_time\033[0m and try again."
+			$ZENITY --error \
+				--title "Maintenance Reminder" \
+				--text "The e-amusement Cloud servers are currently down for maintenance.\nPlease wait until <b>${approx_time:1}</b> and try again." 2>/dev/null
+			exit 255
+		else
+			maintenance_start=$(printf '%(%l:%M%P %Z)T\n' "$(date +%s -u -d "20:00")")
+			$ZENITY --question \
+				--width 400 \
+				--title "Maintenance Warning" \
+				--text "The e-amusement Cloud servers will be going down for daily maintenance at <b>${maintenance_start:1}</b> and ending at ${approx_time:1}. It is HIGHLY RECOMMENDED that you don't play ${GAME_TITLE} at this time.\n\n<b>Do you still want to launch ${GAME_TITLE}?</b>" 2>/dev/null
+			[[ $? -ne 0 ]] && exit 1
 		fi
-		echo -e "The e-amusement Cloud servers are currently down for maintenance. Please wait until \033[1m$approx_time\033[0m and try again."
-		$ZENITY --error \
-			--title "Maintenance Reminder" \
-			--text "The e-amusement Cloud servers are currently down for maintenance.\nPlease wait until <b>$approx_time</b> and try again." 2>/dev/null
-		exit 255
+
+		unset approx_time maintenance_start
 	fi
 
+	unset cHour
 	# Show a wayland warning
 	if [[ $XDG_SESSION_TYPE == 'wayland' ]]; then
 		echo "Wayland detected; expect problems"
@@ -221,6 +232,7 @@ EOF
 		update-desktop-database "${apps_folder}"
 	fi
 	update-mime-database "${mime_folder}"
+	ln -s "${apps_folder}/${SIMPLE_NAME}.desktop" "$HOME/Desktop/"
 }
 
 create_icons() {
