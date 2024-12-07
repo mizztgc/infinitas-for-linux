@@ -21,6 +21,7 @@
 # - pipewire-pulse
 #     !! Debian users may also need to install pulseaudio-utils for enabling the loopback device !!
 # - pipewire-audio
+# - libpulse
 # - wget
 # - xdg-utils
 # - zenity
@@ -85,6 +86,7 @@ fi
 #KDIALOG="$(command -v kdialog)"
 ICOTOOL="$(command -v icotool)"
 PW_LOOPBACK="$(command -v pw-loopback)"
+PACTL="$(command -v pactl)"
 WGET="$(command -v wget)"
 WINE="$(command -v wine)"
 WINEBOOT="$(command -v wineboot)"
@@ -167,20 +169,31 @@ run_game() {
 	fi
 
 	# Loopback device
-	echo "Starting PipeWire loopback device..."
-	$PW_LOOPBACK -m '[ FL FR ]' -l 30 --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
-	export PULSE_SINK=konaste
+	# I may have had assistance from ChatGPT for this.
+	current_samplerate=$($PACTL info | grep -w 'Default Sample Specification:' | sed 's/.* \([0-9]*\)Hz/\1/')
+	if [[ "$current_samplerate" -ne 44100 ]]; then
+		echo "Audio sample rate detected at $current_samplerate Hz. Enabling loopback device..."
+		if [[ -z "$PW_LOOPBACK" ]]; then
+			echo "pw-loopback was not found" 1>&2
+		else
+			echo "Found pw-loopback"
+			$PW_LOOPBACK -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
+			[[ $? -eq 0 ]] && echo "successfully enabled loopback device" && export PULSE_SINK=konaste
+		fi
+
+		unset current_samplerate
+	fi
 
 	sleep 1
 
 	# Start the game.
 	${WINE} start '/high' '/wait' "${LAUNCHER_EXECUTABLE}" "$LOGIN_TOKEN"
-	wineserver -w
+	${WINESERVER} -w
 	echo -e "\n\033[1;95mThank you for playing...\033[0m\n"
 
 	sleep 1
 	kill -15 $(jobs -p)
-	return $exc
+	return
 }
 
 create_launcher() {
