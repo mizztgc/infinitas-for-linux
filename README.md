@@ -31,6 +31,7 @@ This script requires the following dependencies: (**NOTE:** The dependency names
 * **pipewire-pulse** (required; for sound)
   * Debian users may need to also install **pulseaudio-utils**
 * **pipewire-audio** (required; for sound)
+* **libpulse** (required; for sound & to determine audio sample rate)
 * **xdg-utils** (required; to handle the `bm2dxinf://` URI)
 * **zenity** (required; for showing message boxes)
 * **icoutils** (game install only; for creating icons)
@@ -49,8 +50,10 @@ chmod +x infinitas
 
 You will also need to install `org.winehq.Wine` from Flathub. Ensure the branch is `stable-23.08` or newer.
 
+~~(I still need to learn how to make a proper flatpak application...)~~
+
 ## KNOWN ISSUES
-Due to the nature of Linux, you may encounter issues that aren't present on Windows. Some of the issues are documented below:
+Due to the nature of Linux (and Wine), you may encounter issues that aren't present on Windows. Some of the issues are documented below:
 
 ### The launcher's settings menu doesn't open
 Your Wineprefix is missing `wine-mono`. Install it from your distribution's package manager, or click "install" when prompted if using a custom build. If `wine-mono` is not available from your distribution's package manager, you must install it manually. See [this page](https://gitlab.winehq.org/wine/wine/-/wikis/Wine-Mono) for instructions on how to do so.
@@ -71,8 +74,8 @@ To fix this issue, set your refresh rate to either 60Hz or 120Hz if supported. Y
 ### The game crashes after the KONAMI/e-amusement/BEMANI splash screens
 This issue is caused by gstreamer not having access to any H.264 plugins on your system. If you run Ubuntu or any of its derivatives like Linux Mint, make sure you install the third-party multimedia codecs if you didn't do so when first installing your OS.
 
-### Some songs have delayed keysounds
-This is speculated to be due to a new audio container used for the newer beatmania IIDX versions since HEROIC VERSE. As of right now, there seems to be no fix for this. Unless you actively play the songs from Rootage and earlier, as well as the INFINITAS exclusive ones (which seem to also use the older audio container from my observations), this might be a deal breaker for you.
+### The keysounds in some songs are bugged/delayed/DistorteD/missing
+This is speculated to be due to a new audio container used for the newer beatmania IIDX versions starting with CANNON BALLERS and becoming the default for HEROIC VERSE and beyond. As of right now, there seems to be no fix for this. Unless you actively play the songs from SINOBUZ and earlier or the INFINITAS exclusive ones (which seem to also use the older audio container from my observations), this might be a deal breaker for you.
 
 ### Some songs that use overlays crash the game
 As of right there, there is no fix for this, other than to disable the BGA in the advanced song options menu.
