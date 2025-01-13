@@ -80,6 +80,9 @@ This is speculated to be due to a new audio container used for the newer beatman
 ### Some songs that use overlays crash the game
 As of right there, there is no fix for this, other than to disable the BGA in the advanced song options menu.
 
+### Alt-tabbing causes the game to appear extremely tiny in the top-left corner of my screen
+This mostly occurs if you are playing at a resolution other than 1920x1080 on Wayland and also using a vanilla build of Wine (also observed with the staging build as of wine 9.22).
+
 ***
 # Special thanks
 * [This Reddit thread](https://www.reddit.com/r/bemani/comments/yardc2/anyone_run_their_konasute_infinitas_sdvx_etc/) [(this comment specifically)](https://www.reddit.com/r/bemani/comments/yardc2/comment/ke5z7mi/)
