@@ -33,24 +33,16 @@ This script requires the following dependencies: (**NOTE:** The dependency names
 * **pipewire-audio** (required; for sound)
 * **libpulse** (required; for sound & to determine audio sample rate)
 * **xdg-utils** (required; to handle the `bm2dxinf://` URI)
-* **zenity** (required; for showing message boxes)
 * **icoutils** (game install only; for creating icons)
 * **wget** (game install only; for downloading the installer)
-* **flatpak** (optional; only required if `--flatpak` is passed to this script)
 
 ## HOW TO INSTALL:
 ```
 git clone https://github.com/mizztgc/infinitas-for-linux/
 cd infinitas-for-linux/
-chmod +x infinitas
-./infinitas install
+chmod +x infinitas.sh
+./infinitas.sh install
 ```
-
-**NOTE:** If you want to use the Flatpak build of Wine over a native build, run `./infinitas --flatpak install`. This should only be done if you use a stable distro that doesn't have Wine 9.0 like Debian 12.x, if you run a Steam Deck, or if you really care about sandboxing. Despite the basic Flatpak support, this script was made without sandboxing in mind, so I cannot guarantee if the game will work.
-
-You will also need to install `org.winehq.Wine` from Flathub. Ensure the branch is `stable-23.08` or newer.
-
-~~(I still need to learn how to make a proper flatpak application...)~~
 
 ## KNOWN ISSUES
 Due to the nature of Linux (and Wine), you may encounter issues that aren't present on Windows. Some of the issues are documented below:
@@ -70,6 +62,9 @@ If you launch the game and you've been stuck on a black screen for a while, try 
 You will mostly encounter this issue if you play in a Wayland session. Due to Wayland's behavior, it will only expose your currently set refresh rate to all applications, which causes beatmania IIDX INFINITAS to not be able to find a suitable display mode. It can become annoying if you have a display that natively outputs at 75Hz, 90Hz, etc.
 
 To fix this issue, set your refresh rate to either 60Hz or 120Hz if supported. You can optionally switch to a 16:9 resolution if you can't stand the game being stretched to fill your screen. Alternatively, you can play in an Xorg (X11) session, which will allow the game to automatically set your resolution and refresh rate.
+
+### No sound, despite the loopback device running
+Check to see if the loopback device is muted.
 
 ### The game crashes after the KONAMI/e-amusement/BEMANI splash screens
 This issue is caused by gstreamer not having access to any H.264 plugins on your system. If you run Ubuntu or any of its derivatives like Linux Mint, make sure you install the third-party multimedia codecs if you didn't do so when first installing your OS.
