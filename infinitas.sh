@@ -91,7 +91,7 @@ run_game() {
 
 	# Dependency check time~!
 	[[ -z "${PW_LOOPBACK}" ]] && error "Missing PipeWire executable: pw-loopback" && exit 1
-	[[ -z "${PW_LOOPBACK}" ]] && error "Missing dependency: libpulse" && exit 1
+	[[ -z "${PACTL}" ]] && error "Missing dependency: libpulse" && exit 1
 
 	# Enable the loopback device if needed
 	# I may have had help from ChatGPT for this part (damn regular expressions...)
