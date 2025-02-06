@@ -24,13 +24,13 @@ backup=()
 options=()
 install="$pkgname.install"
 changelog=
-source=("konastelinux-v${pkgver}.tar.gz")
+source=("https://github.com/mizztgc/${pkgname}/releases/download/v${pkgver}/konaste-linux-v${pkgver}.tar.gz")
 noextract=()
 sha256sums=('39f30f178505b84e440500bbee287937c81efef7591bfa79666ecfc7457754bf')
 validpgpkeys=()
 
 prepare() {
-	tar -xf "konastelinux-v${pkgver}.tar.gz"
+	tar -xf "konaste-linux-v${pkgver}.tar.gz"
 }
 
 package() {
