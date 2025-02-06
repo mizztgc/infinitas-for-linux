@@ -3,7 +3,7 @@ pkgname=konaste-linux
 pkgver=0.1
 pkgrel=1
 epoch=
-pkgdesc="Unofficial script for playing KONAMI Amusement Game Station (Konaste) games on Linux, using Wine"
+pkgdesc="Run KONAMI Amusement Game Station (Konaste) games using Wine"
 arch=('x86_64')
 url="https://github.com/mizztgc/konaste-linux"
 license=('GPL')
@@ -15,7 +15,7 @@ makedepends=()
 checkdepends=()
 optdepends=(
 	"gamemode: run with better performance"
-	"gamescope: run games through a gamescope compositor"
+	"gamescope: run games through a gamescope compositor with --gamescope"
 	)
 provides=()
 conflicts=()
@@ -36,29 +36,30 @@ prepare() {
 package() {
 	# MimeTypes
 	echo 'Installing mimetypes...'
-	for u in "$srcdir"/uri/*; do
-		install -Dm644 "$u" "$pkgdir/usr/share/mime/packages/$(basename -- $u)"
+	cd "$srcdir"
+	for u in uri/*; do
+		install -Dvm644 "$u" "$pkgdir/usr/share/mime/packages/$(basename -- $u)"
 	done
 
 	# Icons
 	echo 'Installing icons...'
-	for i in "$srcdir"/icon/*; do
+	for i in icon/*; do
 		for a in "$i"/apps/*; do
-			install -Dm644 "$a" "$pkgdir/usr/share/icons/hicolor/$(basename -- $i)/apps/$(basename -- $a)"
+			install -Dvm644 "$a" "$pkgdir/usr/share/icons/hicolor/$(basename -- $i)/apps/$(basename -- $a)"
 		done
 
 		for m in "$i"/mimetypes/*; do
-			install -Dm644 "$m" "$pkgdir/usr/share/icons/hicolor/$(basename -- $i)/mimetypes/$(basename -- $m)"
+			install -Dvm644 "$m" "$pkgdir/usr/share/icons/hicolor/$(basename -- $i)/mimetypes/$(basename -- $m)"
 		done
 	done
 
 	# Launchers
 	echo 'Installing desktop entries...'
-	for l in "$srcdir"/apps/*; do
-		install -Dm644 "$l" "$pkgdir/usr/share/applications/$(basename -- $l)"
+	for l in apps/*; do
+		install -Dvm644 "$l" "$pkgdir/usr/share/applications/$(basename -- $l)"
 	done
 
-	# And finish with the launcher
+	# And finish with the script
 	echo 'Installing script...'
-	install -Dm755 "$srcdir"/konaste "$pkgdir/usr/bin/konaste"
+	install -Dvm755 konaste "$pkgdir/usr/bin/konaste"
 }
