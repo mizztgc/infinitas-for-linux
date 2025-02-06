@@ -1,7 +1,7 @@
 # Konaste Linux (formerly Infinitas for Linux)
 An unofficial method of playing KONAMI Amusement Game Station (Konaste/コナステ) games on Linux, written in Bash (Distribution package branch)
 
-[discord server](https://discord.com/invite/snPwbvagWZ)
+### **WARNING: THIS BRANCH IS FOR THE VERSION OF KONASTE LINUX INTENDED TO BE INSTALLED AS A SYSTEM PACKAGE. AS SUCH, IT DOES NOT ALLOW FOR THE CREATION OF ICONS, DESKTOP LAUNCHERS, ETC.**
 
 ## DISCLAIMER:
 
