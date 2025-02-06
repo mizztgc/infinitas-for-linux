@@ -1,15 +1,11 @@
 # Konaste Linux (formerly Infinitas for Linux)
-An unofficial method of playing KONAMI Amusement Game Station (Konaste/コナステ) games on Linux, written in Bash (Distribution package branch)
-
-### **WARNING: THIS BRANCH IS FOR THE VERSION OF KONASTE LINUX INTENDED TO BE INSTALLED AS A SYSTEM PACKAGE. AS SUCH, IT DOES NOT ALLOW FOR THE CREATION OF ICONS, DESKTOP LAUNCHERS, ETC.**
+An unofficial method of playing KONAMI Amusement Game Station (Konaste/コナステ) games on Linux, written in Bash
 
 ## DISCLAIMER:
 
-This script is in no way affiliated with, endorsed, nor supported by KONAMI Amusement. All games require a KONAMI ID to play, and most games require a subscription to their respective basic course subscriptions in order to access their full versions. This script will NOT allow you to gain access to things you aren't paying for, nor will the script developer assist you with such actions.
+This script is in no way affiliated with, endorsed, nor supported by KONAMI Amusement. All games require a KONAMI ID to play, and most games require a subscription to their respective basic course subscriptions in order to access their full versions. This script will NOT allow you to gain access to things you aren't paying for, nor will the script developer assist you with such actions. *Play at your own risk.*
 
 Due to Wine's nature, some games may exhibit severe issues not present on Windows. This script ***only*** does the bare minimum to get these games working on Linux.
-
-*Play at your own risk.*
 
 ## WHAT DOES THIS SCRIPT DO?
 
@@ -45,27 +41,20 @@ This script requires the following dependencies: (**NOTE:** The dependency names
 * **pipewire-audio** (for sound)
 * **libpulse** (for sound & to determine audio sample rate)
 * **xdg-utils** (to handle the login tokens)
-* **msitools** (only if you intend on using the `--silent` installation flag)
-* **icoutils OR imagemagick** (for creating icons)
 * **wget** (for downloading the needed windows dependencies and of course, the game installers)
 
 ## HOW TO INSTALL:
-```
-git clone https://github.com/mizztgc/konaste-linux/
-cd konaste-linux/
-chmod +x konaste.sh
-./konaste.sh init
-```
+### Arch Linux-based Distros (EndeavourOS, Manjaro, etc.)
 
-This will create a new Wineprefix located at `~/.local/share/konaste` and copy the script to said directory.
-Once the Wineprefix has been initialized, you can begin installing your preferred Konaste games. For example, to install **beatmania IIDX INFINITAS**:
+Konaste Linux can be installed from the [Arch User Repository](https://aur.archlinux.org/packages/konaste-linux). Using an AUR helper such as `paru`, run the following command:
 ```
-./konaste.sh iidx install
+paru -S konaste-linux
 ```
-You can also append `--silent` to the command if you don't want to run the installer and/or want to use with other scripts.
+### Other Distributions
+Download the latest archive from [Releases](https://github.com/mizztgc/konaste-linux/releases) and follow the instructions in INSTRUCTIONS.txt.
 
 ## KNOWN ISSUES
-Due to the nature of Linux (and Wine), you may encounter issues that aren't present on Windows. Some of the issues are documented below:
+Due to the nature of Linux (and Wine), you may encounter issues that aren't present on Windows. Many of the issues listed were related to beatmania IIDX INFINITAS, but other Konaste games may also exhibit these issues:
 
 ### The launcher's settings menu doesn't open
 Your Wineprefix is missing `wine-mono`. Install it from your distribution's package manager, or click "install" when prompted if using a custom build. If `wine-mono` is not available from your distribution's package manager, you must install it manually. See [this page](https://gitlab.winehq.org/wine/wine/-/wikis/Wine-Mono) for instructions on how to do so.
