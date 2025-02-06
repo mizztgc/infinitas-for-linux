@@ -7,11 +7,11 @@ An unofficial method of playing KONAMI Amusement Game Station (Konaste/コナス
 
 ## DISCLAIMER:
 
-This script is in no way affiliated with, endorsed, nor supported by KONAMI Amusement. All games require a KONAMI ID to play, and most games require a subscription to their respective basic course subscriptions in order to access their full versions. This script will NOT allow you to gain access to things you aren't paying for, nor will the script developer assist you with such actions.
+This script is in no way affiliated with, endorsed, nor supported by KONAMI Amusement. All games require a KONAMI ID to play, and most games require a subscription to their respective basic course subscriptions in order to access their full versions. This script will NOT allow you to gain access to things you aren't paying for, nor will the script developer assist you with such actions. *Play at your own risk.*
 
 Due to Wine's nature, some games may exhibit severe issues not present on Windows. This script ***only*** does the bare minimum to get these games working on Linux.
 
-*Play at your own risk.*
+To clear up any confusion, this version is intended to be ran *locally*, meaning it has some additional features, notably the creation of icons, .desktop launchers, and MimeTypes. There is another version I am currently working on made specifically to be installed as a full-on package, which I ***HIGHLY SUGGEST*** you use instead. That can be found [here](https://github.com/mizztgc/konaste-linux/tree/distro).
 
 ## WHAT DOES THIS SCRIPT DO?
 
@@ -52,6 +52,16 @@ This script requires the following dependencies: (**NOTE:** The dependency names
 * **wget** (for downloading the needed windows dependencies and of course, the game installers)
 
 ## HOW TO INSTALL:
+### Arch Linux-based Distros (EndeavourOS, Manjaro, etc.)
+
+Konaste Linux can be installed from the [Arch User Repository](https://aur.archlinux.org/packages/konaste-linux). Using an AUR helper such as `paru`, run the following command:
+```
+paru -S konaste-linux
+```
+**NOTE:** This installs the aforementioned 'distro' version of Konaste Linux.
+
+### Other Distributions
+You'll have to do this manually. I'm sorry.
 ```
 git clone https://github.com/mizztgc/konaste-linux/
 cd konaste-linux/
