@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=beatmania IIDX INFINITAS
+Type=Application
+Categories=Game
+GenericName=Rhythm Game
+GenericName[ja]=音ゲー
+GenericName[ko]=음악 게임
+MimeType=x-scheme-handler/bm2dxinf;
+Icon=infinitas
+Exec=konaste iidx %u

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=SOUND VOLTEX EXCEED GEAR
+Name[ja]=SOUND VOLTEX EXCEED GEAR コナステ
+Name[ko]=SOUND VOLTEX EXCEED GEAR コナステ
+Type=Application
+Categories=Game
+GenericName=Rhythm Game
+GenericName[ja]=音ゲー
+GenericName[ko]=음악 게임
+MimeType=x-scheme-handler/konaste.sdvx;
+Icon=sdvx-exceedgear
+Exec=konaste sdvx %u

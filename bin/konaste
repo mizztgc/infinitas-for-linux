@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION='0.1'
+VERSION='0.1a'
 #
 # Konaste Linux: A Bash script for installing and playing KONAMI Amusement Game
 # Station (Konaste) games on Linux-based operating systems, using Wine.

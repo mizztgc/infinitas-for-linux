@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=GITADORA
+Name[ja]=GITADORA コナステ
+Name[ko]=GITADORA コナステ
+Type=Application
+Categories=Game
+GenericName=Rhythm Game
+GenericName[ja]=音ゲー
+GenericName[ko]=음악 게임
+MimeType=x-scheme-handler/konaste.gitadora;
+Icon=gitadora
+Exec=konaste gitadora %u

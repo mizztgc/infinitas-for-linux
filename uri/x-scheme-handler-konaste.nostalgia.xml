@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+    <mime-type type="x-scheme-handler/konaste.nostalgia">
+        <comment>ノスタルジア Launcher</comment>
+        <icon name="x-scheme-handler-konaste.nostalgia"/>
+        <glob-deleteall/>
+        <glob pattern="konaste.nostalgia://*"/>
+    </mime-type>
+</mime-info>

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=pop'n music Lively
+Type=Application
+Categories=Game
+GenericName=Rhythm Game
+GenericName[ja]=戦略ゲーム
+GenericName[ko]=전략 게임
+MimeType=x-scheme-handler/konaste.popn-music;
+Icon=popn-music
+Exec=konaste popn %u
