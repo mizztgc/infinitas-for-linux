@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION='0.1a'
+VERSION='0.1b'
 #
 # Konaste Linux: A Bash script for installing and playing KONAMI Amusement Game
 # Station (Konaste) games on Linux-based operating systems, using Wine.
@@ -330,7 +330,9 @@ prepare_wineprefix() {
 	VCR2010_LINK="https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe"
 
 	# Add the fonts so Japanese/Chinese characters render properly
-	if [[ -d '/usr/share/fonts/noto-cjk' ]]; then
+	# Distros are pretty weird with how they package fonts, especially the Noto CJK ones
+	if [[ -n "$(find /usr/share/fonts -type d -name 'noto-cjk')" ]]; then
+	#if [[ -d '/usr/share/fonts/noto-cjk' || -d '/usr/share/fonts/truetype/noto-cjk' ]]; then
 		# If the Noto CJK font family is present on the system, use it
 		if [[ ! -f "${WINEPREFIX}/drive_c/windows/Fonts/sourcehansans.ttc" ]]; then
 			info 'Found Noto Sans CJK font family in system' >&2
