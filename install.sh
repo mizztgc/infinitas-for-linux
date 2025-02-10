@@ -6,15 +6,6 @@ cd "$(dirname -- $(realpath -- $0))"
 # Parse flags
 [[ $# -gt 0 ]] && while [[ $# -gt 0 ]]; do
 	case "$1" in
-		-a|--aur) # for the AUR
-			if [[ -z "$pkgdir" ]]; then
-				echo -e "\033[38;5;9merror:\033[0m \$pkgdir is not declared"
-				return 1
-			fi
-			pfx="$pkgDir"
-			noRefresh=1
-			break
-			;;
 		-h|--help|help) show_help=1 ;;
 		-u|--uninstall) uninstall=1 ;;
 		-I|--no-icons) noIcons=1 ;;
