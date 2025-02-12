@@ -33,6 +33,7 @@ WINEBOOT="$(command -v wineboot)"
 WINEPATH="$(command -v winepath)"
 WINESERVER="$(command -v wineserver)"
 WINETRICKS="$(command -v winetricks)"
+MSIEXTRACT="$(command -v msiextract)"
 PW_LOOPBACK="$(command -v pw-loopback)"
 PACTL="$(command -v pactl)"
 WGET="$(command -v wget)"
@@ -89,6 +90,7 @@ show_help() {
 		echo -e "  list: List installed games"
 		echo -e "  help: Show this message"
 		echo -e "\n\033[1mFlags: \033[0m"
+		echo -e "  --silent:    Skip the game installer and use defaults (requires msitools)"
 		echo -en "  --gamescope: Use Valve's gamescope compositor "
 		if [[ ! -x "${GAMESCOPE}" ]]; then
 			echo -e '\033[38;5;1m(not installed)\033[0m'
@@ -106,6 +108,7 @@ show_help() {
 ####################################################################################################
 
 parse_flags() {
+	# TODO: Improve this.
 	if [[ $# -gt 0 ]]; then
 		while [[ $# -gt 0 ]]; do
 			case "$1" in
@@ -147,6 +150,7 @@ parse_flags() {
 					fi
 					;;
 				# Flags and whatnot
+				--silent) silentInstall=1 ;;
 				--gamescope) declare -gr useGamescope=1 2>/dev/null ;;
 				--*) error "Unknown flag: $1" && exit 1 ;;
 				*) error "Unknown command: $1" && exit 1 ;;
@@ -166,6 +170,9 @@ parse_flags() {
 
 function get_launcher_for_game() {
 	[[ -z "$toPlay" ]] && return 1
+	# FIXME: Find a better way to get values from the Windows registry
+	# Even though this does "work", it's by no means perfect, and I've already fried my ADHD brain
+	# trying to learn how regular expressions work.
 	local k="$(WINEDEBUG='-all' "${WINE}" reg query "HKLM\\SOFTWARE\\KONAMI\\$(get_game_information dirtitle)" /v 'InstallDir' '/reg:64' | awk '/REG_/ {print substr($0, index($0,$3))}')"
 	if [[ -n "$k" ]]; then
 		path="$("${WINEPATH}" -u "${k}")"
@@ -331,43 +338,40 @@ prepare_wineprefix() {
 
 	# Add the fonts so Japanese/Chinese characters render properly
 	# Distros are pretty weird with how they package fonts, especially the Noto CJK ones
-	if [[ -n "$(find /usr/share/fonts -type d -name 'noto-cjk')" ]]; then
+	if [[ -d "$(find /usr/share/fonts -type d -name 'noto-cjk')" ]]; then
 	#if [[ -d '/usr/share/fonts/noto-cjk' || -d '/usr/share/fonts/truetype/noto-cjk' ]]; then
 		# If the Noto CJK font family is present on the system, use it
-		if [[ ! -f "${WINEPREFIX}/drive_c/windows/Fonts/sourcehansans.ttc" ]]; then
-			info 'Found Noto Sans CJK font family in system' >&2
-			info 'Setting registry entries to use for CJK fonts...' >&2
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS Gothic' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS PGothic' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS UI Gothic' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS Mincho' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS PMincho' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Meiryo' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Meiryo UI' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'メイリオ' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'ＭＳ ゴシック' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'ＭＳ Ｐゴシック' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Microsoft JhengHei' /t 'REG_SZ' /d 'Noto Sans CJK TC' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Microsoft JhengHei UI' /t 'REG_SZ' /d 'Noto Sans CJK TC' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Microsoft YaHei' /t 'REG_SZ' /d 'Noto Sans CJK SC' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Microsoft YaHei UI' /t 'REG_SZ' /d 'Noto Sans CJK SC' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MingLiU' /t 'REG_SZ' /d 'Noto Sans CJK TC' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MingLiU-ExtB' /t 'REG_SZ' /d 'Noto Sans CJK TC' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'ＭＳ 明朝' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'ＭＳ Ｐゴシック' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'ＭＳ Ｐ明朝' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Yu Gothic' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Yu Gothic UI' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Yu Mincho' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
-		fi
-	elif [[ ! -f "${WINEPREFIX}/drive_c/windows/Fonts/sourcehansans.ttc" && -x "${WINETRICKS}" ]]; then
-		# If Source Han Sans isn't present within the prefix, install it
-		info 'Using Winetricks to install CJK fonts...' >&2
-		"${WINETRICKS}" cjkfonts
+		info 'Found Noto Sans CJK font family in system' >&2
+		info 'Setting registry entries to use for CJK fonts...' >&2
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS Gothic' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS PGothic' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS UI Gothic' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS Mincho' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS PMincho' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Meiryo' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Meiryo UI' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'メイリオ' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'ＭＳ ゴシック' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'ＭＳ Ｐゴシック' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Microsoft JhengHei' /t 'REG_SZ' /d 'Noto Sans CJK TC' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Microsoft JhengHei UI' /t 'REG_SZ' /d 'Noto Sans CJK TC' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Microsoft YaHei' /t 'REG_SZ' /d 'Noto Sans CJK SC' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Microsoft YaHei UI' /t 'REG_SZ' /d 'Noto Sans CJK SC' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MingLiU' /t 'REG_SZ' /d 'Noto Sans CJK TC' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MingLiU-ExtB' /t 'REG_SZ' /d 'Noto Sans CJK TC' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'ＭＳ 明朝' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'ＭＳ Ｐゴシック' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'ＭＳ Ｐ明朝' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Yu Gothic' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Yu Gothic UI' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Yu Mincho' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
+	else
+		warning "Noto CJK fonts were not found on your system. Japanese fonts may not render properly!"
 	fi
 
 	cd "${WINEPREFIX}/drive_c"
 
+	# might be redundant since wine already bundles a version of vcr2010
 	info 'Downloading Microsoft Visual C++ Redist 2010...' >&2
 	"${WGET}" -qt 3 -O "${WINEPREFIX}/drive_c/$(basename -- $VCR2010_LINK)" "$VCR2010_LINK"
 	if [[ $? -ne 0 ]]; then
@@ -384,41 +388,47 @@ prepare_wineprefix() {
 		rm "$(basename -- $VCR2010_LINK)"
 	fi
 
-	if [[ -z "$noDXVK" && "$noDXVK" -ne 1 ]]; then
-		info 'Downloading DXVK...' >&2
-		"${WGET}" -qt 3 -O "${WINEPREFIX}/drive_c/$(basename -- $DXVK_LINK)" "$DXVK_LINK"
-		if [[ $? -ne 0 ]]; then
-			error "Failed to install DXVK. The setup process will continue without it..."
-		else
-			info "Extracting DXVK archive..." >&2
-			tar -xf dxvk-*.tar.gz
+	# TODO: Allow the user to choose whether they want DXVK or not
+	"${WGET}" -qt 3 -O "${WINEPREFIX}/drive_c/$(basename -- $DXVK_LINK)" "$DXVK_LINK"
+	if [[ $? -ne 0 ]]; then
+		error "Failed to install DXVK. The setup process will continue without it..."
+	else
+		info "Extracting DXVK archive..." >&2
+		tar -xf dxvk-*.tar.gz
 
-			info "Moving DXVK files to Windows directory..." >&2
-			mv -b dxvk-*/x32/*.dll windows/syswow64/
-			mv -b dxvk-*/x64/*.dll windows/system32/
+		# the '-b' flag makes a backup of the built-in DLLs in case you need to revert
+		info "Moving DXVK files to Windows directory..." >&2
+		mv -b dxvk-*/x32/*.dll windows/syswow64/
+		mv -b dxvk-*/x64/*.dll windows/system32/
 
-			info "Setting DLL overrides for DXVK..." >&2
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d8' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d8' /t 'REG_SZ' /d 'native' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d9' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d9' /t 'REG_SZ' /d 'native' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d10core' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d10core' /t 'REG_SZ' /d 'native' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d11' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d11' /t 'REG_SZ' /d 'native' /f > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'dxgi' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
-			"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'dxgi' /t 'REG_SZ' /d 'native' /f > /dev/null
+		# DX8 and DX10 might not be needed, since the BEMANI games run with DX9 and bonga uses DX11 (unity moment)
+		info "Setting DLL overrides for DXVK..." >&2
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d8' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d8' /t 'REG_SZ' /d 'native' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d9' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d9' /t 'REG_SZ' /d 'native' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d10core' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d10core' /t 'REG_SZ' /d 'native' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d11' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d11' /t 'REG_SZ' /d 'native' /f > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'dxgi' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
+		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'dxgi' /t 'REG_SZ' /d 'native' /f > /dev/null
 
-			# Clean up remaining files
-			rm -rf dxvk-*
-		fi
+		# Clean up remaining files
+		rm -rf dxvk-*
 	fi
 
 	info "Creating additional registry keys..." >&2
-	"${WINE}" reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' > /dev/null
-	"${WINE}" reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' > /dev/null
-	"${WINE}" reg add 'HKCU\SOFTWARE\Wine\FileOpenAssociations' /v 'Enable' /d 'N' /f > /dev/null
-	"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'Konaste' /d '1920x1080' /f > /dev/null
+	"${WINE}" reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' > /dev/null				# Use xrandr on X11 to change resolution + refresh if needed
+	"${WINE}" reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' > /dev/null	# Force 120Hz in virtual desktop
+	"${WINE}" reg add 'HKCU\SOFTWARE\Wine\FileOpenAssociations' /v 'Enable' /d 'N' /f > /dev/null								# Stop Wine from creating desktop & mime entries
+	"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Explorer\Desktops' /v 'Konaste' /d '1920x1080' /f > /dev/null							# Virtual desktop
+
+	# Officially introduced in Wine 10.0 to use ffmpeg over gstreamer for Media Foundation libraries.
+	# Currently disabled due to an audio bug in beatmania IIDX INFINITAS involving songs that utilize the new
+	# audio container (some CANNON BALLERS & Rootage songs, and all HEROIC VERSE, BISTROVER, CastHour, and RESIDENT songs).
+	# Uncomment if you want it, but be prepared to hear some lovely static in aforementioned songs.
+	#"${WINE}" reg add 'HKCU\SOFTWARE\Wine\MediaFoundation' /v 'DisableGstByteStreamHandler' /t 'REG_DWORD' /d 1 /f '/reg:64' > /dev/null
 
 	case "${LANG}" in
 		ja*) PREFIX_INIT="Wineprefixは初期化され、コナステで使用できるようになりました" ;;
@@ -434,6 +444,8 @@ launch_game() {
 	# Cut down on DXVK messages in your terminal
 	export DXVK_LOG_LEVEL='error'
 
+	# Add some launch parameters for the game
+	# TODO: Create and execute a temporary script to make it easier to use with gamescope
 	declare -a launchParams=( )
 	if [[ -x "${GAMEMODE}" ]]; then
 		info "Using gamemoderun"
@@ -445,14 +457,16 @@ launch_game() {
 	if [[ "$useGamescope" -eq 1 ]]; then
 		if [[ -x "${GAMESCOPE}" ]]; then
 			info "Using gamescope"
+			# I chose 1280x720 for better compatibility for the SteamOS noobs, but I do
+			# believe 1920x1080 would be better all round.
 			launchParams+=( "${GAMESCOPE}" -W 1280 -H 720 -w 1920 -h 1080 )
 			case "$toPlay" in
-				iidx|sdvx|ddr) launchParams+=( -r 120 --framerate-limit 120 ) ;;
+				iidx|sdvx|ddr) launchParams+=( -r 120 --framerate-limit 120 ) ;; # these games support 120fps
 				bombergirl)    launchParams+=( -r 60 --adaptive-sync ) ;; # since bonga is a unity game
 				*)             launchParams+=( -r 60 --framerate-limit 60 ) ;;
 
 			esac
-			launchParams+=( -b -- )
+			launchParams+=( -f -- )
 		else
 			warning "--gamescope flag provided, but gamescope was not found on your system. Running normally..."
 		fi
@@ -477,6 +491,7 @@ launch_game() {
 		unset current_samplerate
 	fi
 
+	# Force virtual desktop to help with gamescope
 	launchParams+=( "${WINE}" start '/high' '/wait' )
 	if [[ "$useGamescope" -eq 1 && -x "${GAMESCOPE}" ]]; then
 		launchParams+=( explorer '/desktop=Konaste,1920x1080' )
@@ -486,6 +501,7 @@ launch_game() {
 	LANG='ja_JP.UTF-8' "${launchParams[@]}" "${launcher}" "${launchUri}"
 	"${WINESERVER}" -w
 
+	# Kill the loopback device if it's running
 	if [[ $(jobs | wc -l) -gt 0 ]]; then
 		kill -15 $(jobs -p)
 		if [[ $? -eq 0 ]]; then
@@ -493,8 +509,9 @@ launch_game() {
 		fi
 	fi
 
+	# Little thing added for fun because IIDX EMPRESS's credits song is amazing.
 	[[ "$toPlay" == 'iidx' ]] && echo -e "\n\033[1;95mThank you for playing...\033[0m\n"
-	exit 0
+	exit 0 # exit with a code of 0 in case the above fails (this would return a non-zero value, indicating an "error")
 }
 
 install_game() {
