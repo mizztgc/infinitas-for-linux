@@ -42,20 +42,17 @@ GAMESCOPE="$(command -v gamescope)"
 
 DEFAULT_PREFIX_LOCATION="$HOME/.local/share/konaste"
 
-error() {
-	printf '\033[1;38;5;9m-> ERROR:\033[0m %s\033[0m\n' "$@" >&2
-}
+log() {
+	case "$1" in
+		err|error) LOG_LABEL='\033[1;38;5;9m-> ERROR:\033[0m '; shift ;;
+		warn|warning) LOG_LABEL='\033[1;38;5;11m-> WARNING:\033[0m '; shift ;;
+		ok) LOG_LABEL='\033[1;38;5;10m->\033[0m '; shift ;;
+		info|*) LOG_LABEL='\033[1m->\033[0m '; shift ;;
+	esac
 
-warning() {
-	printf '\033[1;38;5;11m-> WARNING:\033[0m %s\033[0m\n' "$@" >&2
-}
-
-info() {
-	printf '\033[1m-> %s\033[0m\n' "$@" >&2
-}
-
-ok() {
-	printf '\033[1;38;5;10m-> %s\033[0m\n' "$@" >&2
+	[[ "$TERM" != 'dumb' ]] && echo -en "${LOG_LABEL}" >&2
+	echo -e "$@" >&2
+	unset LOG_LABEL
 }
 
 show_help() {
@@ -78,7 +75,7 @@ show_help() {
 				;;
 			*)
 				echo -en '\r\033[2K' # Erase title line
-				error "Unknown help section: $1"
+				log error "Unknown help section: $1"
 				show_help # Run the command, but without any args
 				return 1
 				;;
@@ -108,59 +105,76 @@ show_help() {
 ####################################################################################################
 
 parse_flags() {
-	# TODO: Improve this.
-	if [[ $# -gt 0 ]]; then
-		while [[ $# -gt 0 ]]; do
-			case "$1" in
-				help) show_help "$2"; exit $? ;;
-				version) echo "Konaste Linux v${VERSION}" && exit ;;
-				list) declare -gr cmd='list' 2>/dev/null ;;
-				init) declare -gr cmd='init' 2>/dev/null ;;
-				iidx|sdvx|ddr|gitadora|nostalgia|popn|bombergirl) [[ -z "$toPlay" ]] && toPlay="$1" ;;
-				# Now we get to the good part
-				bm2dxinf://*|konaste.*://*|*://*)
-					if [[ -n "$toPlay" ]]; then
-						if [[ -n "$(grep -Eo $(get_game_information uri) <(echo $1))" ]]; then
-							launchUri="$1"
-						else
-							error "$(get_title) cannot be launched with a $(echo $1 | sed 's/:\/\/.*//') URI"
-							exit 2
-						fi
-					else
-						# Fine. We'll just GUESS the game that needs to be played.
-						case "$1" in
-							bm2dxinf://*) [[ -z "$toPlay" ]] && toPlay='iidx' ;;
-							konaste.sdvx://*) [[ -z "$toPlay" ]] && toPlay='sdvx' ;;
-							konaste.ddr://*) [[ -z "$toPlay" ]] && toPlay='ddr' ;;
-							konaste.gitadora://*) [[ -z "$toPlay" ]] && toPlay='gitadora' ;;
-							konaste.nostalgia://*) [[ -z "$toPlay" ]] && toPlay='nostalgia' ;;
-							konaste.popn-music://*) [[ -z "$toPlay" ]] && toPlay='popn' ;;
-							konaste.bomber-girl://*) [[ -z "$toPlay" ]] && toPlay='bombergirl' ;;
-							konaste.*://*)
-								error "Invalid Konaste URI specified: $1"
-								exit 2
-								;;
-							*)
-								error "Unknown URI specified: $1"
-								exit 2
-								;;
-						esac
-
-						launchUri="$1"
-					fi
-					;;
-				# Flags and whatnot
-				--silent) silentInstall=1 ;;
-				--gamescope) declare -gr useGamescope=1 2>/dev/null ;;
-				--*) error "Unknown flag: $1" && exit 1 ;;
-				*) error "Unknown command: $1" && exit 1 ;;
-			esac
-
-			shift
-		done
-	else
-		error "You must specify an argument"
+	[[ $# -eq 0 ]] && {
+		log error "No arguments provided. Type \033[1mkonaste help\033[0m for a list of commands"
 		exit 1
+	}
+
+	# TODO: Improve this.
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			help) show_help "$2"; exit $? ;;
+			version) echo "Konaste Linux v${VERSION}" && exit ;;
+			list) declare -gr cmd='list' 2>/dev/null ;;
+			init) declare -gr cmd='init' 2>/dev/null ;;
+			iidx|sdvx|ddr|gitadora|nostalgia|popn|bombergirl) [[ -z "$toPlay" ]] && toPlay="$1" ;;
+			# Now we get to the good part
+			bm2dxinf://*|konaste.*://*|*://*)
+				if [[ -n "$toPlay" ]]; then
+					if [[ -n "$(grep -Eo $(get_game_information uri) <(echo $1))" ]]; then
+						launchUri="$1"
+					else
+						log error "$(get_title) cannot be launched with a $(echo $1 | sed 's/:\/\/.*//') URI"
+						exit 2
+					fi
+				else
+					# Fine. We'll just GUESS the game that needs to be played.
+					case "$1" in
+						bm2dxinf://*) [[ -z "$toPlay" ]] && toPlay='iidx' ;;
+						konaste.sdvx://*) [[ -z "$toPlay" ]] && toPlay='sdvx' ;;
+						konaste.ddr://*) [[ -z "$toPlay" ]] && toPlay='ddr' ;;
+						konaste.gitadora://*) [[ -z "$toPlay" ]] && toPlay='gitadora' ;;
+						konaste.nostalgia://*) [[ -z "$toPlay" ]] && toPlay='nostalgia' ;;
+						konaste.popn-music://*) [[ -z "$toPlay" ]] && toPlay='popn' ;;
+						konaste.bomber-girl://*) [[ -z "$toPlay" ]] && toPlay='bombergirl' ;;
+						konaste.*://*)
+							log error "Invalid Konaste URI specified: $1"
+							exit 2
+							;;
+						*)
+							log error "Unknown URI specified: $1"
+							exit 2
+							;;
+					esac
+
+					launchUri="$1"
+				fi
+				;;
+			# Flags and whatnot
+			--silent) silentInstall=1 ;;
+			--wine-vd) useWineVD=1 ;;
+			--gamescope) useGamescope=1 ;;
+			--*) error "Unknown flag: $1" && exit 1 ;;
+			*) error "Unknown command: $1" && exit 1 ;;
+		esac
+
+		shift
+	done
+
+	# Enable Gamescope
+	if [[ $useGamescope -eq 1 ]]; then
+		if [[ ! -x "${GAMESCOPE}" ]]; then
+			log warning "--gamescope flag specified, but gamescope was not found on your system"
+			declare -gr useGamescope=0 # disable this and set it to read only
+		else
+			declare -ag GAMESCOPE_PARAMS=( "${GAMESCOPE}" -w 1920 -h 1080 )
+			case "$toPlay" in
+				iidx|sdvx|ddr) GAMESCOPE_PARAMS+=( -r 120 --framerate-limit 120 ) ;; # these games support 120fps
+				bombergirl)    GAMESCOPE_PARAMS+=( -r 60 --adaptive-sync ) ;; # since bonga is a unity game
+				*)             GAMESCOPE_PARAMS+=( -r 60 --framerate-limit 60 ) ;;
+			esac
+			GAMESCOPE_PARAMS+=( -f -- )
+		fi
 	fi
 }
 
@@ -280,7 +294,7 @@ function get_game_information() {
 			URI='konaste.bomber-girl'
 			;;
 		*)
-			#error "Invalid game specified: $1" >&2
+			#log error "Invalid game specified: $1" >&2
 			return 1
 			;;
 	esac
@@ -300,6 +314,31 @@ function get_game_information() {
 
 	unset GAME_TITLE EN_TITLE DIR_TITLE SIMPLE_NAME INSTALLER_LINK LAUNCH_PAGE LAUNCHER_NAME obtain
 	return 0
+}
+
+function generate_launch_script() {
+	# Generate a temporary launch script for Konaste
+	log info "Generating launch script..." >&2
+
+	TEMP_SCRIPT="/tmp/konaste.sh"
+	echo '#!/bin/sh' > "$TEMP_SCRIPT"
+	echo "export WINEPREFIX=\"${WINEPREFIX}\"" >> "$TEMP_SCRIPT"
+	echo "WINE=\"${WINE}\"" >> "$TEMP_SCRIPT"
+	echo "WINESERVER=\"${WINESERVER}\"" >> "$TEMP_SCRIPT"
+
+	# Export PULSE_SINK if the loopback device is running
+	[[ "$PULSE_SINK" == 'konaste' ]] && echo "export PULSE_SINK='konaste'" >> "$TEMP_SCRIPT"
+
+	declare -a wineParams=( start '/high' '/wait' )
+	if [[ $useWineVD -eq 1 ]]; then
+		wineParams+=( explorer '/desktop=Konaste' )
+	fi
+
+	# Launch the wine executable
+	echo "LANG=ja_JP.UTF-8 \"${WINE}\" ${wineParams[@]} '$(get_launcher_for_game)' '$launchUri'" >> "$TEMP_SCRIPT"
+	echo "\"${WINESERVER}\" -w" >> "$TEMP_SCRIPT"
+
+	echo "$TEMP_SCRIPT" # Return the path of the temp script
 }
 
 ####################################################################################################
@@ -325,11 +364,11 @@ list_games() {
 prepare_wineprefix() {
 	# Create the Wineprefix if it does not exist
 	if [[ ! -e "${WINEPREFIX}" && ! -f "${WINEPREFIX}/system.reg" ]]; then
-		info "Wineprefix at ${WINEPREFIX} was not found. Creating one now..." >&2
+		log info "Wineprefix at ${WINEPREFIX} was not found. Creating one now..." >&2
 		mkdir -p "${WINEPREFIX}"
 		"${WINEBOOT}" -i 2>/dev/null
 	else
-		warning "Existing Wineprefix detected. Starting initialization process..."
+		log warning "Existing Wineprefix detected. Starting initialization process..."
 		"${WINEBOOT}" -u 2>/dev/null
 	fi
 
@@ -339,10 +378,8 @@ prepare_wineprefix() {
 	# Add the fonts so Japanese/Chinese characters render properly
 	# Distros are pretty weird with how they package fonts, especially the Noto CJK ones
 	if [[ -d "$(find /usr/share/fonts -type d -name 'noto-cjk')" ]]; then
-	#if [[ -d '/usr/share/fonts/noto-cjk' || -d '/usr/share/fonts/truetype/noto-cjk' ]]; then
-		# If the Noto CJK font family is present on the system, use it
-		info 'Found Noto Sans CJK font family in system' >&2
-		info 'Setting registry entries to use for CJK fonts...' >&2
+		log info 'Found Noto Sans CJK font family in system' >&2
+		log info 'Setting registry entries to use for CJK fonts...' >&2
 		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS Gothic' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
 		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS PGothic' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
 		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'MS UI Gothic' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
@@ -366,22 +403,22 @@ prepare_wineprefix() {
 		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Yu Gothic UI' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
 		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\Fonts\Replacements' /v 'Yu Mincho' /t 'REG_SZ' /d 'Noto Sans CJK JP' /f > /dev/null
 	else
-		warning "Noto CJK fonts were not found on your system. Japanese fonts may not render properly!"
+		log warning "Noto CJK fonts were not found on your system. Japanese fonts may not render properly!"
 	fi
 
 	cd "${WINEPREFIX}/drive_c"
 
 	# might be redundant since wine already bundles a version of vcr2010
-	info 'Downloading Microsoft Visual C++ Redist 2010...' >&2
-	"${WGET}" -qt 3 -O "${WINEPREFIX}/drive_c/$(basename -- $VCR2010_LINK)" "$VCR2010_LINK"
+	log info 'Downloading Microsoft Visual C++ Redist 2010...' >&2
+	"${WGET}" -t 3 -O "${WINEPREFIX}/drive_c/$(basename -- $VCR2010_LINK)" "$VCR2010_LINK"
 	if [[ $? -ne 0 ]]; then
-		error "Failed to install Microsoft Visual C++ Redist 2010!"
+		log error "Failed to install Microsoft Visual C++ Redist 2010!"
 		exit 3
 	else
-		info 'Installing Microsoft Visual C++ Redist 2010...' >&2
+		log info 'Installing Microsoft Visual C++ Redist 2010...' >&2
 		"${WINE}" 'C:\vcredist_x64.exe' '/quiet' 2>/dev/null
 		if [[ $? -ne 0 ]]; then
-			error "Failed to install Microsoft Visual C++ Redist 2010!"
+			log error "Failed to install Microsoft Visual C++ Redist 2010!"
 			exit 4
 		fi
 
@@ -389,20 +426,21 @@ prepare_wineprefix() {
 	fi
 
 	# TODO: Allow the user to choose whether they want DXVK or not
-	"${WGET}" -qt 3 -O "${WINEPREFIX}/drive_c/$(basename -- $DXVK_LINK)" "$DXVK_LINK"
+	log info "Downloading DXVK archive..."
+	"${WGET}" -t 3 -O "${WINEPREFIX}/drive_c/$(basename -- $DXVK_LINK)" "$DXVK_LINK"
 	if [[ $? -ne 0 ]]; then
-		error "Failed to install DXVK. The setup process will continue without it..."
+		log error "Failed to install DXVK. The setup process will continue without it..."
 	else
-		info "Extracting DXVK archive..." >&2
+		log info "Extracting DXVK archive..." >&2
 		tar -xf dxvk-*.tar.gz
 
 		# the '-b' flag makes a backup of the built-in DLLs in case you need to revert
-		info "Moving DXVK files to Windows directory..." >&2
+		log info "Moving DXVK files to Windows directory..." >&2
 		mv -b dxvk-*/x32/*.dll windows/syswow64/
 		mv -b dxvk-*/x64/*.dll windows/system32/
 
 		# DX8 and DX10 might not be needed, since the BEMANI games run with DX9 and bonga uses DX11 (unity moment)
-		info "Setting DLL overrides for DXVK..." >&2
+		log info "Setting DLL overrides for DXVK..." >&2
 		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d8' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
 		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d8' /t 'REG_SZ' /d 'native' /f > /dev/null
 		"${WINE}" reg add 'HKCU\SOFTWARE\Wine\DllOverrides' /v 'd3d9' /t 'REG_SZ' /d 'native' /f '/reg:64' > /dev/null
@@ -418,7 +456,7 @@ prepare_wineprefix() {
 		rm -rf dxvk-*
 	fi
 
-	info "Creating additional registry keys..." >&2
+	log info "Creating additional registry keys..." >&2
 	"${WINE}" reg add 'HKCU\SOFTWARE\Wine\X11 Driver' /v 'UseXRandR' /t 'REG_SZ' /d 'Y' /f '/reg:64' > /dev/null				# Use xrandr on X11 to change resolution + refresh if needed
 	"${WINE}" reg add 'HKLM\SOFTWARE\Microsoft\DirectDraw' /v 'ForceRefreshRate' /t 'REG_DWORD' /d 120 /f '/reg:64' > /dev/null	# Force 120Hz in virtual desktop
 	"${WINE}" reg add 'HKCU\SOFTWARE\Wine\FileOpenAssociations' /v 'Enable' /d 'N' /f > /dev/null								# Stop Wine from creating desktop & mime entries
@@ -434,78 +472,76 @@ prepare_wineprefix() {
 		ja*) PREFIX_INIT="Wineprefixは初期化され、コナステで使用できるようになりました" ;;
 		*)   PREFIX_INIT="Wineprefix has been initialized and is ready to use for Konaste" ;;
 	esac
-	ok "${PREFIX_INIT}" >&2
+	log ok "${PREFIX_INIT}" >&2
 }
 
 launch_game() {
 	[[ -z "$toPlay" ]] && exit 1
-	info "Launching $(get_title)..."
+	log info "Launching $(get_title)..."
 
 	# Cut down on DXVK messages in your terminal
 	export DXVK_LOG_LEVEL='error'
 
-	# Add some launch parameters for the game
-	# TODO: Create and execute a temporary script to make it easier to use with gamescope
-	declare -a launchParams=( )
-	if [[ -x "${GAMEMODE}" ]]; then
-		info "Using gamemoderun"
-		launchParams+=( "${GAMEMODE}" )
-	else
-		warning "Unable to locate binary for gamemoderun. While not required, it is recommended to have to maximize performance"
-	fi
-
-	if [[ "$useGamescope" -eq 1 ]]; then
-		if [[ -x "${GAMESCOPE}" ]]; then
-			info "Using gamescope"
-			# I chose 1280x720 for better compatibility for the SteamOS noobs, but I do
-			# believe 1920x1080 would be better all round.
-			launchParams+=( "${GAMESCOPE}" -W 1280 -H 720 -w 1920 -h 1080 )
-			case "$toPlay" in
-				iidx|sdvx|ddr) launchParams+=( -r 120 --framerate-limit 120 ) ;; # these games support 120fps
-				bombergirl)    launchParams+=( -r 60 --adaptive-sync ) ;; # since bonga is a unity game
-				*)             launchParams+=( -r 60 --framerate-limit 60 ) ;;
-
-			esac
-			launchParams+=( -f -- )
-		else
-			warning "--gamescope flag provided, but gamescope was not found on your system. Running normally..."
-		fi
-	fi
+# 	if [[ "$useGamescope" -eq 1 ]]; then
+# 		if [[ -x "${GAMESCOPE}" ]]; then
+# 			log info "Using gamescope"
+# 			# I chose 1280x720 for better compatibility for the SteamOS noobs, but I do
+# 			# believe 1920x1080 would be better all round.
+# 			launchParams+=( "${GAMESCOPE}" -W 1280 -H 720 -w 1920 -h 1080 )
+# 			case "$toPlay" in
+# 				iidx|sdvx|ddr) launchParams+=( -r 120 --framerate-limit 120 ) ;; # these games support 120fps
+# 				bombergirl)    launchParams+=( -r 60 --adaptive-sync ) ;; # since bonga is a unity game
+# 				*)             launchParams+=( -r 60 --framerate-limit 60 ) ;;
+#
+# 			esac
+# 			launchParams+=( -f -- )
+# 		else
+# 			log warning "--gamescope flag provided, but gamescope was not found on your system. Running normally..."
+# 		fi
+# 	fi
 
 	# The BEMANI games require a loopback device for audio to work.
 	# Bomber Girl uses a proper game engine (Unity) and doesn't need such workarounds.
 	# Thanks for making things difficult, konmai!
 	if [[ "$toPlay" != 'bombergirl' ]]; then
-		[[ -z "${PW_LOOPBACK}" ]] && error "Missing PipeWire executable: pw-loopback" && exit 1
-		[[ -z "${PACTL}" ]] && error "Missing dependency: libpulse" && exit 1
+		[[ -z "${PW_LOOPBACK}" ]] && log error "Missing PipeWire executable: pw-loopback" && exit 1
+		[[ -z "${PACTL}" ]] && log error "Missing dependency: libpulse" && exit 1
 
 		# I may have had help from ChatGPT for this part (damn regular expressions...)
 		current_samplerate=$($PACTL info | grep -w 'Default Sample Specification:' | sed 's/.* \([0-9]*\)Hz/\1/')
 		if [[ "$current_samplerate" -ne 44100 ]]; then
-			warning "Audio sample rate detected at ${current_samplerate}Hz. Enabling loopback device..."
+			log warning "Audio sample rate detected at ${current_samplerate}Hz. Enabling loopback device..."
 			"${PW_LOOPBACK}" -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
-			[[ $? -eq 0 ]] && echo "Successfully enabled PipeWire loopback device" >&2 && export PULSE_SINK=konaste
+			[[ $? -eq 0 ]] && log info "Successfully enabled PipeWire loopback device" >&2 && export PULSE_SINK=konaste
 		else
-			echo "Audio sample rate detected at 44100Hz. Not creating loopback device..." >&2
+			log info "Audio sample rate detected at 44100Hz. Not creating loopback device..." >&2
 		fi
 		unset current_samplerate
 	fi
 
 	# Force virtual desktop to help with gamescope
-	launchParams+=( "${WINE}" start '/high' '/wait' )
-	if [[ "$useGamescope" -eq 1 && -x "${GAMESCOPE}" ]]; then
-		launchParams+=( explorer '/desktop=Konaste,1920x1080' )
-	fi
+	#launchParams+=( "${WINE}" start '/high' '/wait' )
+	#if [[ "$useGamescope" -eq 1 && -x "${GAMESCOPE}" ]]; then
+	#	launchParams+=( explorer '/desktop=Konaste,1920x1080' )
+	#fi
 
 	# The time has finally come.
-	LANG='ja_JP.UTF-8' "${launchParams[@]}" "${launcher}" "${launchUri}"
-	"${WINESERVER}" -w
+	#LANG='ja_JP.UTF-8' "${launchParams[@]}" "${launcher}" "${launchUri}"
+	#"${WINESERVER}" -w
+
+	temp="$(generate_launch_script)"
+
+	declare -a PRELAUNCH_PARAMS=(  )
+	[[ -n "${GAMESCOPE_PARAMS}" ]] && PRELAUNCH_PARAMS+=( "${GAMESCOPE_PARAMS[@]}" )
+	PRELAUNCH_PARAMS+=( sh )
+
+	"${PRELAUNCH_PARAMS[@]}" "$temp"
 
 	# Kill the loopback device if it's running
 	if [[ $(jobs | wc -l) -gt 0 ]]; then
 		kill -15 $(jobs -p)
 		if [[ $? -eq 0 ]]; then
-			echo "Terminated PipeWire loopback device"
+			log info "Terminated PipeWire loopback device"
 		fi
 	fi
 
@@ -523,26 +559,26 @@ install_game() {
 	cd "${WINEPREFIX}/drive_c"
 
 	if [[ ! -f "$(basename -- $installer)" ]]; then
-		info "Downloading installer for $(get_title)..." >&2
-		"${WGET}" -qt 3 -O "${WINEPREFIX}/drive_c/$(basename -- $installer)" "$installer"
+		log info "Downloading installer for $(get_title)..." >&2
+		"${WGET}" -t 3 -O "${WINEPREFIX}/drive_c/$(basename -- $installer)" "$installer"
 		if [[ $? -ne 0 ]]; then
-			error "Failed to download installer for $(get_title)!"
+			log error "Failed to download installer for $(get_title)!"
 			exit 3
 		fi
 	fi
 
 	if [[ "$silentInstall" -eq 1 ]]; then
-		info "Performing silent install..." >&2
+		log info "Performing silent install..." >&2
 		if [[ -z "${MSIEXTRACT}" ]]; then
 			case "${LANG}" in
 				ja*) NO_MSITOOLS="$(get_title)のサイレントインストールを実行するにはmsitoolsが必要です。" ;;
 				*)   NO_MSITOOLS="msitools is required to perform a silent installation of $(get_title)"
 			esac
-			error "${NO_MSITOOLS}"
+			log error "${NO_MSITOOLS}"
 			exit 1
 		fi
 
-		info "Extracting files from installer..." >&2
+		log info "Extracting files from installer..." >&2
 		"${MSIEXTRACT}" "$(basename -- $installer)" > /dev/null
 		mkdir -p Games/"$(get_game_information dirtitle)"/Resource # make this folder so the game won't complain
 
@@ -557,14 +593,14 @@ install_game() {
 		# This is actually important, so we need to install this.
 		# It "probably" won't replace the DXVK libraries, otherwise I will cry
 		if [[ -d Games/"${dir_title}"/'DirectX 9.0c Redist' ]]; then
-			info "Installing bundled DirectX 9.0c Runtime..." >&2
+			log info "Installing bundled DirectX 9.0c Runtime..." >&2
 			"${WINE}" ./Games/"${dir_title}"/'DirectX 9.0c Redist'/DXSETUP.exe '/silent'
 			if [[ $? -ne 0 ]]; then
 				case "${LANG}" in
 					ja*) DX_FAIL="バンドルされた DirectX ランタイムのインストールに失敗しました。重大な問題が発生する可能性があります。" ;;
 					*)   DX_FAIL="Failed to install bundled DirectX runtime! You may encounter severe issues" ;;
 				esac
-				error "${DX_FAIL}" >&2
+				log error "${DX_FAIL}" >&2
 				unset DX_FAIL
 			else
 				# Nuke it, too.
@@ -572,25 +608,25 @@ install_game() {
 			fi
 		fi
 
-		info "Creating registry keys for $(get_title)..." >&2
+		log info "Creating registry keys for $(get_title)..." >&2
 		"${WINE}" reg add "HKLM\\SOFTWARE\\KONAMI\\${dir_title}" /v 'InstallDir' /t 'REG_SZ' /d "C:\Games\\${dir_title}\\" /f '/reg:64' > /dev/null
 		"${WINE}" reg add "HKLM\\SOFTWARE\\KONAMI\\${dir_title}" /v 'ResourceDir' /t 'REG_SZ' /d "C:\Games\\${dir_title}\\Resource\\" /f '/reg:64' > /dev/null
 	else
-		info "Performing interactive install..." >&2
+		log info "Performing interactive install..." >&2
 		export WINEDLLOVERRIDES="${WINEDLLOVERRIDES};ieframe=d"
 		LANG='ja_JP.UTF-8' "${WINE}" msiexec '/i' "C:\\\\$(basename -- $installer)" '/L*' "C:\\\\${simplename}_install.log"
 		case $? in
 			0)  ;;
-			1)  error "The $(get_title) installer was terminated unexpectedly" && exit 4 ;;
-			66) error "The $(get_title) installer was cancelled by the user" && exit 5 ;;
-			67) error "$(get_title) failed to install. Check the log at \033[1;4m${WINEPREFIX}/drive/c/${simplename}_install.log\033[22;24m to find out what happened" && exit 6 ;;
-			*)  error "An unknown error occurred while installing $(get_title). Check the log at \033[1;4m${WINEPREFIX}/drive/c/${simplename}_install.log\033[22;24m to find out what happened" && exit 7 ;;
+			1)  log error "The $(get_title) installer was terminated unexpectedly" && exit 4 ;;
+			66) log error "The $(get_title) installer was cancelled by the user" && exit 5 ;;
+			67) log error "$(get_title) failed to install. Check the log at \033[1;4m${WINEPREFIX}/drive/c/${simplename}_install.log\033[22;24m to find out what happened" && exit 6 ;;
+			*)  log error "An unknown error occurred while installing $(get_title). Check the log at \033[1;4m${WINEPREFIX}/drive/c/${simplename}_install.log\033[22;24m to find out what happened" && exit 7 ;;
 		esac
 	fi
 
 	sleep 2
 	if [[ -z "${launchUri}" ]]; then
-		echo -e "\033[1;38;5;10m$(get_title) has been successfully installed.\033[0m"
+		log ok "$(get_title) has been successfully installed."
 		[[ "$TERM" == 'dumb' ]] && exec xdg-open "$(get_game_information webpage)"
 		exit 0
 	else
@@ -602,13 +638,13 @@ install_game() {
 
 main() {
 	# Warn if running as the root user.
-	[[ $EUID -eq 0 ]] && warning "Avoid running this script as root/sudo."
+	[[ $EUID -eq 0 ]] && log warning "Avoid running this script as root/sudo."
 
 	block_gamescope() {
 		# Block gamescope compositors
 		# NOTE: To use gamescope, pass --gamescope as an argument
 		if [[ $GAMESCOPE_WAYLAND_DISPLAY || $XDG_CURRENT_DESKTOP == 'gamescope' ]]; then
-			error "This script should NOT be ran directly through Gamescope"
+			log error "This script should NOT be ran directly through Gamescope"
 			echo "To use gamescope, pass the --gamescope flag to this script"
 			killall -ABRT gamescope-wl
 			exit 134
@@ -627,7 +663,7 @@ main() {
 			exit
 		fi
 
-		error "Wineprefix has not been initialized"
+		log error "Wineprefix has not been initialized"
 		echo -e "Run \033[1m$(basename -- $0) init\033[0m to initialize the prefix"
 		exit 1
 	fi
@@ -643,7 +679,7 @@ main() {
 	else # Run the game.
 		launcher="$(get_launcher_for_game)"
 		if [[ -z "$launcher" ]]; then
-			error "$(get_title) is not installed. Running installer..."
+			log error "$(get_title) is not installed. Running installer..."
 			install_game
 		fi
 
@@ -651,7 +687,7 @@ main() {
 		if [[ -z "$launchUri" ]]; then
 			exec xdg-open "$(get_game_information webpage)"
 			[[ "$?" -ne 0 ]] && {
-				error "Failed to open webpage for $(get_title)"
+				log error "Failed to open webpage for $(get_title)"
 				exit 123
 			}
 		fi
