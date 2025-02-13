@@ -80,7 +80,7 @@ fi
 if [[ -z "$pfx" ]]; then
 	if [[ $(id -u) -eq 0 ]]; then
 		# Install to /usr/local
-		pfx='/usr/local'
+		pfx='/usr'
 	else
 		# Install to /home/<you>/.local
 		pfx="$HOME/.local"
