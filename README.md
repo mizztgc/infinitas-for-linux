@@ -51,7 +51,7 @@ Konaste Linux can be installed from the [Arch User Repository](https://aur.archl
 paru -S konaste-linux
 ```
 ### Other Distributions
-Download the latest archive from [Releases](https://github.com/mizztgc/konaste-linux/releases) and follow the instructions in INSTRUCTIONS.txt.
+Download the latest archive from [Releases](https://github.com/mizztgc/konaste-linux/releases) and run `install.sh`
 
 ## KNOWN ISSUES
 Due to the nature of Linux (and Wine), you may encounter issues that aren't present on Windows. Many of the issues listed were related to beatmania IIDX INFINITAS, but other Konaste games may also exhibit these issues:
