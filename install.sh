@@ -79,7 +79,7 @@ fi
 # Check if $pfx is filled
 if [[ -z "$pfx" ]]; then
 	if [[ $(id -u) -eq 0 ]]; then
-		# Install to /usr/local
+		# Install to /usr
 		pfx='/usr'
 	else
 		# Install to /home/<you>/.local
@@ -128,49 +128,42 @@ for g in "${toInstall[@]}"; do
 			iconMimeName='x-scheme-handler-bm2dxinf.png'
 			mimeName='x-scheme-handler-bm2dxinf.xml'
 			desktopName='infinitas.desktop'
-			iconSizes=( 16 32 64 128 256 )
 			;;
 		sdvx)
 			iconAppsName='sdvx-exceedgear.png'
 			iconMimeName='x-scheme-handler-konaste.sdvx.png'
 			mimeName='x-scheme-handler-konaste.sdvx.xml'
 			desktopName='sdvx-exceedgear.desktop'
-			iconSizes=( 16 32 64 128 256 )
 			;;
 		ddr)
 			iconAppsName='ddr-gp.png'
 			iconMimeName='x-scheme-handler-konaste.ddr.png'
 			mimeName='x-scheme-handler-konaste.ddr.xml'
 			desktopName='ddr-grandprix.desktop'
-			iconSizes=( 16 24 32 48 64 128 256 )
 			;;
 		gitadora)
 			iconAppsName='gitadora.png'
 			iconMimeName='x-scheme-handler-konaste.gitadora.png'
 			mimeName='x-scheme-handler-konaste.gitadora.xml'
 			desktopName='gitadora.desktop'
-			iconSizes=( 16 24 32 48 64 128 256 )
 			;;
 		nostalgia)
 			iconAppsName='nostalgia.png'
 			iconMimeName='x-scheme-handler-konaste.nostalgia.png'
 			mimeName='x-scheme-handler-konaste.nostalgia.xml'
 			desktopName='nostalgia.desktop'
-			iconSizes=( 16 32 64 128 256 )
 			;;
 		popn)
 			iconAppsName='popn-music.png'
 			iconMimeName='x-scheme-handler-konaste.popn-music.png'
 			mimeName='x-scheme-handler-konaste.popn-music.xml'
 			desktopName='popn-music.desktop'
-			iconSizes=( 16 32 64 128 256 )
 			;;
 		bombergirl)
 			iconAppsName='bombergirl.png'
 			iconMimeName='x-scheme-handler-konaste.bomber-girl.png'
 			mimeName='x-scheme-handler-konaste.bomber-girl.xml'
 			desktopName='bombergirl.desktop'
-			iconSizes=( 16 32 64 128 256 )
 			;;
 	esac
 
@@ -185,6 +178,11 @@ for g in "${toInstall[@]}"; do
 	unset i iconAppsName iconMimeName
 
 	install -Dm644 uri/"${mimeName}" "${mimeDir}/packages/${mimeName}"
+	# If running as a local user, change the Exec line in the desktop files to the
+	# value of $binDir.
+
+	# If there's a better way of doing this, I'd like to know.
+	[[ $(id -u) -ne 0 ]] && sed -i 's:^Exec=konaste:Exec='"${binDir}"'/konaste:' apps/"${desktopName}"
 	install -Dm644 apps/"${desktopName}" "${appDir}/${desktopName}"
 	unset desktopName mimeName
 
@@ -201,4 +199,5 @@ else
 fi
 
 echo 'Done.'
-exit
+[[ ! $(command -v konaste) ]] && echo -e "\033[38;5;10mtip:\033[0m Add ${binDir} to your PATH environment variable for easy access to the Konaste script!"
+exit 0
