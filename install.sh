@@ -67,7 +67,7 @@ Konaste Linux - install.sh Help:
   -p|--prefix       Installs all files to a certain directory
                     Will default to either:
                     - ~/.local (if ran as local user)
-                    - /usr/local (if ran as root/sudo)
+                    - /usr (if ran as root/sudo)
 
 Multiple games can be specified for installation, separated by commas (,).
 example: ./install.sh -g 'iidx,sdvx'
