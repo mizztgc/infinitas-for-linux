@@ -7,6 +7,8 @@ This script is in no way affiliated with, endorsed, nor supported by KONAMI Amus
 
 Due to Wine's nature, some games may exhibit severe issues not present on Windows. This script ***only*** does the bare minimum to get these games working on Linux.
 
+I would also like to point out that I am by no means a professional coder, and there may be some significant errors within my code. *You have been warned.*
+
 ## WHAT DOES THIS SCRIPT DO?
 
 This script is intended to be a simpler way of managing, installing, and playing Konaste games on Linux, using Wine. Unlike many Wine-related programs/scripts, this script does not have many features that power users would enjoy, such as choosing the location of the prefix, using third-party Wine builds, etc.
