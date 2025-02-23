@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION='0.1b'
+VERSION='0.2'
 #
 # Konaste Linux: A Bash script for installing and playing KONAMI Amusement Game
 # Station (Konaste) games on Linux-based operating systems, using Wine.
@@ -32,13 +32,13 @@ WINE="$(command -v wine)"
 WINEBOOT="$(command -v wineboot)"
 WINEPATH="$(command -v winepath)"
 WINESERVER="$(command -v wineserver)"
-WINETRICKS="$(command -v winetricks)"
 MSIEXTRACT="$(command -v msiextract)"
 PW_LOOPBACK="$(command -v pw-loopback)"
 PACTL="$(command -v pactl)"
 WGET="$(command -v wget)"
 GAMEMODE="$(command -v gamemoderun)"
 GAMESCOPE="$(command -v gamescope)"
+_MANGOHUD="$(command -v mangohud)" # this would overwrite the default MANGOHUD env variable so the _ is necessary
 
 DEFAULT_PREFIX_LOCATION="$HOME/.local/share/konaste"
 
@@ -83,18 +83,37 @@ show_help() {
 	else
 		echo -e "\033[0m\nUsage: $(basename -- $0) <game ID|command> ..."
 		echo -e "\n\033[1mCommands: \033[0m"
-		echo -e "  init: Initialize the Wineprefix"
-		echo -e "  list: List installed games"
-		echo -e "  help: Show this message"
+		echo -e "  init  Initialize the Wineprefix"
+		echo -e "  list  List installed games"
+		echo -e "  help  Show this message"
 		echo -e "\n\033[1mFlags: \033[0m"
-		echo -e "  --silent:    Skip the game installer and use defaults (requires msitools)"
-		echo -en "  --gamescope: Use Valve's gamescope compositor "
+		echo -en "  --silent            Skip the game installer and use defaults "
+		[[ ! -x "${MSIEXTRACT}" ]] && echo -en '\033[38;5;1m(unavailable)\033[0m'
+		echo -en "\n  --gamescope         Run through a microcompositor to work around some display quirks "
 		if [[ ! -x "${GAMESCOPE}" ]]; then
 			echo -e '\033[38;5;1m(not installed)\033[0m'
 		else
 			echo -e '\033[38;5;2m(installed)\033[0m'
 		fi
-		echo -e "\nFor a list of usable game IDs, run the following:"
+		echo -en "  --gamemode          Apply temporary OS-level tweaks to improve performance "
+		if [[ ! -x "${GAMEMODE}" ]]; then
+			echo -e '\033[38;5;1m(not installed)\033[0m'
+		else
+			echo -e '\033[38;5;2m(installed)\033[0m'
+		fi
+		echo -en "  --mangohud          Show stats related to FPS and hardware utilization while playing "
+		if [[ ! -x "${_MANGOHUD}" ]]; then
+			echo -e '\033[38;5;1m(not installed)\033[0m'
+		else
+			echo -e '\033[38;5;2m(installed)\033[0m'
+		fi
+		echo -e "  --wine-vd           Run through Wine's virtual desktop"
+		echo -e "\n\033[1mThe following flags are experimental and can break things:\033[0m"
+		echo -e "  --disable-dxvk      Use Wine's built-in DirectX libraries instead of DXVK"
+		echo -e "  --disable-loopback  Do not enable the virtual output workaround for some games"
+		echo -en "  --wayland           Run Wine with the Wayland driver instead of X11 "
+		[[ "$XDG_SESSION_TYPE" != 'wayland' ]] && echo -en '\033[38;5;1m(requires wayland)\033[0m'
+		echo -e "\n\nFor a list of usable game IDs, run the following:"
 		echo -e "  \033[1m\$ $(basename -- $0) help \033[4mgameid\033[0m"
 	fi
 	return
@@ -113,8 +132,12 @@ parse_flags() {
 	# TODO: Improve this.
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-			help) show_help "$2"; exit $? ;;
-			version) echo "Konaste Linux v${VERSION}" && exit ;;
+			help|--help) show_help "$2"; exit $? ;;
+			version|--version)
+				echo -n "Konaste Linux v" >&2
+				echo "${VERSION}"
+				exit
+				;;
 			list) declare -gr cmd='list' 2>/dev/null ;;
 			init) declare -gr cmd='init' 2>/dev/null ;;
 			iidx|sdvx|ddr|gitadora|nostalgia|popn|bombergirl) [[ -z "$toPlay" ]] && toPlay="$1" ;;
@@ -150,30 +173,72 @@ parse_flags() {
 					launchUri="$1"
 				fi
 				;;
-			# Flags and whatnot
+			# Install Flags
 			--silent) silentInstall=1 ;;
-			--wine-vd) useWineVD=1 ;;
+			# Gameplay flags
+			--gamemode) useGamemode=1 ;;
 			--gamescope) useGamescope=1 ;;
-			--*) error "Unknown flag: $1" && exit 1 ;;
-			*) error "Unknown command: $1" && exit 1 ;;
+			--mangohud) useMangohud=1 ;;
+			--wine-vd) useWineVD=1 ;;
+			# DANGER flags:
+			--disable-dxvk) noDXVK=1 ;;
+			--disable-loopback) noLoopback=1 ;;
+			--wayland) useWayland=1 ;;
+			# Unknown.
+			--*) log error "Unknown flag: $1" && exit 1 ;;
+			*) log error "Unknown command: $1" && exit 1 ;;
 		esac
 
 		shift
 	done
 
-	# Enable Gamescope
+	# Set defaults if not defined
+
+	if [[ $useGamemode -eq 1 ]]; then
+		if [[ ! -x "${GAMEMODE}" ]]; then
+			log warning "--gamemode flag specified, but gamemoderun was not found on your system"
+			declare -gr useGamemode=0
+		fi
+	fi
+
+	# Enable Gamescope and set flags
 	if [[ $useGamescope -eq 1 ]]; then
 		if [[ ! -x "${GAMESCOPE}" ]]; then
 			log warning "--gamescope flag specified, but gamescope was not found on your system"
 			declare -gr useGamescope=0 # disable this and set it to read only
 		else
 			declare -ag GAMESCOPE_PARAMS=( "${GAMESCOPE}" -w 1920 -h 1080 )
+			if [[ $useMangohud -eq 1 ]]; then
+				if [[ -x "${_MANGOHUD}" ]]; then
+					# gamescope devs want you to use this.
+					GAMESCOPE_PARAMS+=( --mangoapp )
+				else
+					log warning "--mangohud flag specified, but mangohud was not found on your system"
+					declare -gr useMangohud=0
+				fi
+			fi
 			case "$toPlay" in
 				iidx|sdvx|ddr) GAMESCOPE_PARAMS+=( -r 120 --framerate-limit 120 ) ;; # these games support 120fps
 				bombergirl)    GAMESCOPE_PARAMS+=( -r 60 --adaptive-sync ) ;; # since bonga is a unity game
 				*)             GAMESCOPE_PARAMS+=( -r 60 --framerate-limit 60 ) ;;
 			esac
 			GAMESCOPE_PARAMS+=( -f -- )
+		fi
+	fi
+
+	if [[ $useMangohud -eq 1 ]]; then
+		if [[ ! -x "${_MANGOHUD}" ]]; then
+			log warning "--mangohud flag specified, but mangohud was not found on your system"
+			declare -gr useMangohud=0
+		fi
+	fi
+
+	if [[ $useWayland -eq 1 ]]; then
+		if [[ $XDG_SESSION_TYPE	!= 'wayland' ]]; then
+			log warning "Ignoring --wayland on X11..."
+		else
+			log warning "Make sure your build of Wine supports the Wayland driver!"
+			unset DISPLAY # Wine is configured by default to use X11 over Wayland
 		fi
 	fi
 }
@@ -316,31 +381,6 @@ function get_game_information() {
 	return 0
 }
 
-function generate_launch_script() {
-	# Generate a temporary launch script for Konaste
-	log info "Generating launch script..." >&2
-
-	TEMP_SCRIPT="/tmp/konaste.sh"
-	echo '#!/bin/sh' > "$TEMP_SCRIPT"
-	echo "export WINEPREFIX=\"${WINEPREFIX}\"" >> "$TEMP_SCRIPT"
-	echo "WINE=\"${WINE}\"" >> "$TEMP_SCRIPT"
-	echo "WINESERVER=\"${WINESERVER}\"" >> "$TEMP_SCRIPT"
-
-	# Export PULSE_SINK if the loopback device is running
-	[[ "$PULSE_SINK" == 'konaste' ]] && echo "export PULSE_SINK='konaste'" >> "$TEMP_SCRIPT"
-
-	declare -a wineParams=( start '/high' '/wait' )
-	if [[ $useWineVD -eq 1 ]]; then
-		wineParams+=( explorer '/desktop=Konaste' )
-	fi
-
-	# Launch the wine executable
-	echo "LANG=ja_JP.UTF-8 \"${WINE}\" ${wineParams[@]} '$(get_launcher_for_game)' '$launchUri'" >> "$TEMP_SCRIPT"
-	echo "\"${WINESERVER}\" -w" >> "$TEMP_SCRIPT"
-
-	echo "$TEMP_SCRIPT" # Return the path of the temp script
-}
-
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
@@ -425,11 +465,11 @@ prepare_wineprefix() {
 		rm "$(basename -- $VCR2010_LINK)"
 	fi
 
-	# TODO: Allow the user to choose whether they want DXVK or not
 	log info "Downloading DXVK archive..."
 	"${WGET}" -t 3 -O "${WINEPREFIX}/drive_c/$(basename -- $DXVK_LINK)" "$DXVK_LINK"
 	if [[ $? -ne 0 ]]; then
-		log error "Failed to install DXVK. The setup process will continue without it..."
+		log error "Failed to install DXVK!"
+		exit 5
 	else
 		log info "Extracting DXVK archive..." >&2
 		tar -xf dxvk-*.tar.gz
@@ -475,67 +515,68 @@ prepare_wineprefix() {
 	log ok "${PREFIX_INIT}" >&2
 }
 
+
+
+
+
+
+
+
+
 launch_game() {
 	[[ -z "$toPlay" ]] && exit 1
 	log info "Launching $(get_title)..."
 
+	declare -a launchParams=( )
+
 	# Cut down on DXVK messages in your terminal
 	export DXVK_LOG_LEVEL='error'
 
-# 	if [[ "$useGamescope" -eq 1 ]]; then
-# 		if [[ -x "${GAMESCOPE}" ]]; then
-# 			log info "Using gamescope"
-# 			# I chose 1280x720 for better compatibility for the SteamOS noobs, but I do
-# 			# believe 1920x1080 would be better all round.
-# 			launchParams+=( "${GAMESCOPE}" -W 1280 -H 720 -w 1920 -h 1080 )
-# 			case "$toPlay" in
-# 				iidx|sdvx|ddr) launchParams+=( -r 120 --framerate-limit 120 ) ;; # these games support 120fps
-# 				bombergirl)    launchParams+=( -r 60 --adaptive-sync ) ;; # since bonga is a unity game
-# 				*)             launchParams+=( -r 60 --framerate-limit 60 ) ;;
-#
-# 			esac
-# 			launchParams+=( -f -- )
-# 		else
-# 			log warning "--gamescope flag provided, but gamescope was not found on your system. Running normally..."
-# 		fi
-# 	fi
-
-	# The BEMANI games require a loopback device for audio to work.
-	# Bomber Girl uses a proper game engine (Unity) and doesn't need such workarounds.
-	# Thanks for making things difficult, konmai!
-	if [[ "$toPlay" != 'bombergirl' ]]; then
-		[[ -z "${PW_LOOPBACK}" ]] && log error "Missing PipeWire executable: pw-loopback" && exit 1
-		[[ -z "${PACTL}" ]] && log error "Missing dependency: libpulse" && exit 1
-
-		# I may have had help from ChatGPT for this part (damn regular expressions...)
-		current_samplerate=$($PACTL info | grep -w 'Default Sample Specification:' | sed 's/.* \([0-9]*\)Hz/\1/')
-		if [[ "$current_samplerate" -ne 44100 ]]; then
-			log warning "Audio sample rate detected at ${current_samplerate}Hz. Enabling loopback device..."
-			"${PW_LOOPBACK}" -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
-			[[ $? -eq 0 ]] && log info "Successfully enabled PipeWire loopback device" >&2 && export PULSE_SINK=konaste
-		else
-			log info "Audio sample rate detected at 44100Hz. Not creating loopback device..." >&2
-		fi
-		unset current_samplerate
+	if [[ $noDXVK -eq 1 ]]; then
+		# Use Wine's built-in DirectX libraries instead of the ones from DXVK
+		log warning "DXVK has been disabled. You may encounter glitched/missing graphics while playing $(get_title)!"
+		export WINEDLLOVERRIDES="${WINEDLLOVERRIDES};d3d9=b;d3d11=b;dxgi=b"
 	fi
 
-	# Force virtual desktop to help with gamescope
-	#launchParams+=( "${WINE}" start '/high' '/wait' )
-	#if [[ "$useGamescope" -eq 1 && -x "${GAMESCOPE}" ]]; then
-	#	launchParams+=( explorer '/desktop=Konaste,1920x1080' )
-	#fi
+	if [[ $noLoopback -ne 0 ]]; then
+		# The BEMANI games require a loopback device for audio to work.
+		# Bomber Girl uses a proper game engine (Unity) and doesn't need such workarounds.
+		# Thanks for making things difficult, konmai!
+		if [[ "$toPlay" != 'bombergirl' ]]; then
+			[[ -z "${PW_LOOPBACK}" ]] && log error "Missing PipeWire executable: pw-loopback" && exit 1
+			[[ -z "${PACTL}" ]] && log error "Missing dependency: libpulse" && exit 1
+
+			# I may have had help from ChatGPT for this part (damn regular expressions...)
+			current_samplerate=$($PACTL info | grep -w 'Default Sample Specification:' | sed 's/.* \([0-9]*\)Hz/\1/')
+			if [[ "$current_samplerate" -ne 44100 ]]; then
+				log warning "Audio sample rate detected at ${current_samplerate}Hz. Enabling loopback device..."
+				"${PW_LOOPBACK}" -m '[ FL FR ]' --capture-props='media.class=Audio/Sink node.name=konaste node.description=Konaste audio.rate=44100' &
+				[[ $? -eq 0 ]] && log info "Successfully enabled PipeWire loopback device" >&2 && export PULSE_SINK=konaste
+			else
+				log info "Audio sample rate detected at 44100Hz. Not creating loopback device..." >&2
+			fi
+			unset current_samplerate
+		fi
+	else
+		[[ "$toPlay" != 'bombergirl' ]] && log warning "--disable-loopback flag specified! You may not have audio while playing $(get_title)!"
+	fi
+
+	# Add extra executables to launch parameters
+	[[ $useGamemode -eq 1 ]] && launchParams+=( "${GAMEMODE}" )
+	if [[ $useGamescope -eq 1 && $useMangohud -eq 1 ]]; then
+		# mangohud support is already in the gamescope params
+		launchParams+=( "${GAMESCOPE_PARAMS}" )
+	elif [[ $useMangohud -eq 1 ]]; then
+		# just throw in mangohud
+		launchParams+=( "${_MANGOHUD}" )
+	fi
+
+	launchParams+=( "${WINE}" start '/high' '/wait' )
+	[[ $useWineVD -eq 1 ]] && launchParams+=( explorer '/desktop=Konaste,1920x1080' )
 
 	# The time has finally come.
-	#LANG='ja_JP.UTF-8' "${launchParams[@]}" "${launcher}" "${launchUri}"
-	#"${WINESERVER}" -w
-
-	temp="$(generate_launch_script)"
-
-	declare -a PRELAUNCH_PARAMS=(  )
-	[[ -n "${GAMESCOPE_PARAMS}" ]] && PRELAUNCH_PARAMS+=( "${GAMESCOPE_PARAMS[@]}" )
-	PRELAUNCH_PARAMS+=( sh )
-
-	"${PRELAUNCH_PARAMS[@]}" "$temp"
+	LANG='ja_JP.UTF-8' "${launchParams[@]}" "${launcher}" "${launchUri}"
+	"${WINESERVER}" -w
 
 	# Kill the loopback device if it's running
 	if [[ $(jobs | wc -l) -gt 0 ]]; then
@@ -641,17 +682,33 @@ main() {
 	[[ $EUID -eq 0 ]] && log warning "Avoid running this script as root/sudo."
 
 	block_gamescope() {
-		# Block gamescope compositors
-		# NOTE: To use gamescope, pass --gamescope as an argument
 		if [[ $GAMESCOPE_WAYLAND_DISPLAY || $XDG_CURRENT_DESKTOP == 'gamescope' ]]; then
-			log error "This script should NOT be ran directly through Gamescope"
-			echo "To use gamescope, pass the --gamescope flag to this script"
-			killall -ABRT gamescope-wl
-			exit 134
+			# Add \n to improve visibility because gamescope likes to log a lot.
+			echo
+			log error "Do not run this script directly through a gamescope session. If you do intend on using gamescope, pass --gamescope as an argument.\n"
+			exit 127
 		fi
 	}
 
+	block_gamemode() {
+		if [[ $(env | grep -w 'libgamemodeauto.so.0') ]]; then
+			log error "Do not run this script directly through gamemoderun. If you do intend on using gamemoded, pass --gamemode as an argument."
+			exit 127
+		fi
+	}
+
+	block_mangohud() {
+		if [[ $MANGOHUD -eq 1 && $(env | grep -w mangohud) ]]; then
+			log error "Do not run this script directly through mangohud. If you do intend on using mangohud, pass --mangohud as an argument."
+			exit 127
+		fi
+	}
+
+	# Terminate if either one of these are running
 	block_gamescope
+	block_gamemode
+	block_mangohud
+
 	parse_flags "$@"
 
 	export WINEPREFIX="${DEFAULT_PREFIX_LOCATION}"

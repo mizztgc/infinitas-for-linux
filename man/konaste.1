@@ -1,0 +1,88 @@
+.\" note to self: never do this again
+.TH "konaste" "1" "" "" "Konaste Linux"
+
+.SH "NAME"
+\fBkonaste\fP \- run KONAMI Amusement Game Station (Konaste) games on Linux using \fBwine\fP(1)
+
+
+.SH "SYNOPSIS"
+konaste [ \-\-flags ] [ gameID ] ...
+
+
+.SH "DESCRIPTION"
+\fBKonaste Linux\fP is a Bash script for installing and playing KONAMI Amusement Game Station (Konaste) games on Linux (and possibly other *nix-based OSes) using Wine. It provides some workarounds for common quirks, such as audio, as well as providing DXVK to help boost performance.
+.PP
+\fBDISCLAIMER:\fP Because this method of playing Konaste games on Linux is unofficial, KONAMI Amusement will \fLNOT\fR provide any support for any issues that may arise. All games that can be installed and played through this script will require an active KONAMI ID, with most games requiring an active basic course subscription to access their full-version counterparts.
+.PP
+Wine 9.0 or later is required to use this script.
+
+.SH "COMMANDS"
+\fBinit\fP
+.RS 4
+Initialize the Wineprefix (default location is ~/.local/share/konaste)
+.RE
+
+
+.SH "FLAGS"
+\fB\-\-silent\fR (install only)
+.RS 4
+Do not execute the installer for a specified game and instead use \fBmsitools\fP to extract the files from said installer, and then add the registry keys via Wine.
+.RE
+.PP
+\fB\-\-gamemode\fR
+.RS 4
+Use Feral Interactive's \fBgamemoded\fP(1) to apply temporary OS-level tweaks to improve performance
+.RE
+.PP
+\fB\-\-gamemode\fR
+.RS 4
+Use Feral Interactive's \fBgamemoded\fP(1) to apply temporary OS-level tweaks to improve performance
+.RE
+.PP
+\fB\-\-gamescope\fR
+.RS 4
+Use Valve's \fBgamescope\fP microcompositor to work around some display quirks.
+.PP
+This flag can increase latency.
+.RE
+.PP
+\fB\-\-wine\-vd\fR
+.RS 4
+Run the specified game through Wine's virtual desktop
+.RE
+.PP
+\fBThe following flags MAY have a significant impact on the game's stability and should be avoided if possible:\fP
+.PP
+.RE 4
+\fB\-\-disable\-dxvk\fR
+.RS 4
+Use Wine's built-in DirectX .dlls instead of DXVK's .dlls. Using this flag may result in some games having glitched/missing assets.
+.RE
+
+.PP
+.RE 4
+\fB\-\-disable\-loopback\fR
+.RS 4
+Do not enable the virtual output workaround for the BEMANI games. If your sample rate within PipeWire/PulseAudio is not set to 44100 Hz (it would typically be 48000 Hz), it will result in said games not outputting any sound.
+.RE
+
+.PP
+.RE 4
+\fB\-\-wayland\fR
+.RS 4
+Use Wine's Wayland driver instead of X11.
+.PP
+Before using this option, ensure that your build of Wine was built with support for the Wayland driver. A quick way of checking is to run the following:
+.br
+\fB $ DISPLAY= WINEPREFIX=$HOME/.local/share/konaste wine explorer\fP
+.RE
+
+.SH "AUTHORS"
+\fBKonaste Linux\fP was brought to you by Mizzt. All games available to install are provided to you under a proprietary license by KONAMI Amusement.
+
+
+.SH "SEE ALSO"
+.PP
+\fBwine\fP(1),
+\fBiidx\fP(6),
+\fBbombergirl\fP(6)

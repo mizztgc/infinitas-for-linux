@@ -21,7 +21,7 @@ cd "$(dirname -- $(realpath -- $0))"
 			declare -a toInstall=( )
 			counter=1
 			while true; do
-				id="$(cut -d',' -f${counter} < <(echo "$1"))"
+				id="$(cut -d',' -f${counter} <(echo "$1"))"
 				[[ -z "$id" ]] && break
 
 				case "$id" in
@@ -120,6 +120,13 @@ binDir="${pfx}/bin"
 appDir="${pfx}/share/applications"
 iconDir="${pfx}/share/icons/hicolor"
 mimeDir="${pfx}/share/mime"
+manDir="${pfx}/share/man"
+
+mkdir -p "${binDir}"
+mkdir -p "${appDir}"
+mkdir -p "${iconDir}"
+mkdir -p "${mimeDir}"/packages
+mkdir -p "${manDir}"/man{1,6}
 
 for g in "${toInstall[@]}"; do
 	case "$g" in
@@ -180,20 +187,24 @@ for g in "${toInstall[@]}"; do
 	install -Dm644 uri/"${mimeName}" "${mimeDir}/packages/${mimeName}"
 	# If running as a local user, change the Exec line in the desktop files to the
 	# value of $binDir.
-
 	# If there's a better way of doing this, I'd like to know.
 	[[ $(id -u) -ne 0 ]] && sed -i 's:^Exec=konaste:Exec='"${binDir}"'/konaste:' apps/"${desktopName}"
 	install -Dm644 apps/"${desktopName}" "${appDir}/${desktopName}"
 	unset desktopName mimeName
 
-	# Install the script here (if needed)
-	[[ ! -e "${binDir}/konaste" ]] && install -Dm755 bin/konaste "${binDir}/konaste"
+	# Copy the man pages
+	[[ -f man/${g}.6 ]] && install -Dm644 man/${g}.6 "${manDir}/man6/${g}.6"
 done
+
+# Install the script and its man page
+[[ ! -e "${binDir}/konaste" ]] && install -Dm755 bin/konaste "${binDir}/konaste"
+install -Dm644 man/konaste.1 "${manDir}/man1/konaste.1"
 
 if [[ "$noRefresh" -ne 1 ]]; then
 	update-desktop-database "${appDir}"
 	update-mime-database "${mimeDir}"
 	gtk-update-icon-cache
+	mandb -u 2>/dev/null
 else
 	echo -e "\033[38;5;11mwarn:\033[0m Not updating desktop/mime databases"
 fi

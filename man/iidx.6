@@ -1,0 +1,128 @@
+.\" note to self: never do this again
+.TH "infinitas" "6" "" "" "Konaste Linux"
+
+.SH "NAME"
+\fBinfinitas\fP \- run \fBbeatmania IIDX INFINITAS\fP via \fBkonaste\fP(1)
+
+
+.SH "SYNOPSIS"
+infinitas [ \fU\-\-flags\fP ] \fBbm2dxinf://...\fP
+
+
+.SH "DESCRIPTION"
+\fBbeatmania IIDX INFINITAS\fP is a Japanese subscription-based rhythm game made for playing at home. Like the arcade versions, this version of beatmania IIDX is meant for use on Windows-based operating systems, but is playable under \fBwine\fP(1), albeit with issues. See \fBNOTABLE ISSUES\fP for a list of problems you may encounter while playing.
+.PP
+For a list of usable flags, see the \fBUSABLE FLAGS\fP section within \fBkonaste\fP(1).
+
+.SH "URI"
+Unlike the other Konaste games, \fBbeatmania IIDX INFINITAS\fP has its own \fBbm2dxinf://\fP URI instead of a \fBkonaste.*://\fP one. This URI also has an additional parameter to flag whether you intend on running running \fBbeatmania IIDX INFINITAS\fP in Trial Mode (&trial=), or Release Mode (&rel=).
+.PP
+Below are examples of valid \fBbeatmania IIDX INFINITAS\fP URIs:
+.RS 4
+bm2dxinf://login?tk=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&trial=
+.br
+bm2dxinf://login?tk=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&rel=
+.RE
+
+.SH "NOTABLE ISSUES"
+.PP
+Because of Wine's nature, you will encounter issues that Windows will not have. These issues are documented below:
+.PP
+\fBStuck on a black screen after clicking "START"\fP
+.RS 4
+This issue occurs when the game's audio mode is set to WASAPI 排他モード (Exclusive Mode) instead of WASAPI 共有モード (Shared Mode). If you're able to tab out, there may be an error message hidden behind the game window, complaining about not being able to find an audio device to initialize. Wine currently does not support WASAPI Exclusive Mode, and should be set to Shared Mode when playing.
+.RE
+
+.PP
+\fBGame fails to start with a 5-1501-0003 error code\fP
+.RS 4
+See \fBERROR CODES\fP.
+.RE
+
+.PP
+\fBbeatmania IIDX INFINITAS crashes after going through the KONAMI splash screens\fP
+.RS 4
+This is due to gstreamer not having access to an H.264 plugin for decoding the background BGAs. If you use a distribution like Ubuntu, make sure you have enabled the use of third party multimedia codecs and drivers.
+.RE
+
+.PP
+\fBSongs from HEROIC VERSE to RESIDENT have issues with keysounds\fP
+.RS 4
+This is due to KONAMI switching over to a new WMA-based audio container for beatmania IIDX, starting with CANNON BALLERS.
+.PP
+Using ffmpeg as a backend for Media Foundation does not solve this issue either. It only makes it worse by turning the entire audio, base track and keysounds, into white noise.
+.RE
+
+.SH "ERROR CODES"
+.PP
+\fB5-1501-0003\fP
+.RS 4
+Display initialization error. You will frequently see this if you run a Wayland session, as Wayland only exposes your currently set refresh rate to all applications, and because \fBbeatmania IIDX INFINITAS\fP cannot find a suitable resolution and refresh rate, it will show this error message. This can be a problem if your display has a maximum supported refresh rate that has an awkward value, such as 75Hz, 90Hz, 100Hz, etc. To fix this, navigate to your DE/WM's display settings and set your refresh rate to 60Hz (or 120Hz if supported by your display).
+.PP
+\fBgamescope\fP and Wine's virtual desktop may also fix this issue, but the latter may depend on what build you are using.
+.RE
+
+.PP
+\fB5-1501-0005\fP
+    Audio error. Make sure your preferred audio device is connected and/or enabled within your DE/WM's settings.
+.PP
+\fB5-1501-0025\fP
+.RS 4
+Audio error. Make sure the game's WASAPI setting is set to \fB共有モード (Shared Mode)\fP and not \fB排他モード (Exclusive Mode)\fP.
+.RE
+
+.PP
+\fB5-1501-0042\fP
+.RS 4
+The e-amusement Cloud servers are down for maintenance. Occurs daily between 5am-7am JST (20:00-22:00 UTC).
+.RE
+
+.PP
+\fB5-1512-1041\fP
+.RS 4
+Occurs when you are attempting to access the full version of \fBbeatmania IIDX INFINITAS\fP without the game's basic course subscription.
+.PP
+Seriously, don't. It's not cool.
+.RE
+.PP
+\fB5-1548-0002\fP
+.RS 4
+The game is unable to find the Visual C++ 2010 runtime.
+.RE
+
+.PP
+\fB5-1564-5011\fP
+.RS 4
+Unknown. Could be related to having too many Wine instances running with the Flatpak build of Wine.
+.RE
+
+.PP
+\fB5-1591-0002\fP
+.RS 4
+FPS check error. Occurs when the game is running too fast due to running at a frame rate higher than 60 or 120. This could also occur when running with \fBgamescope\fP.
+.PP
+Word of advice: Please don't mess around with your refresh rate after you've started the game. It won't make things any smoother for your extremely-fast 540Hz monitor, if you could even afford one.
+.RE
+
+.PP
+\fB5-1601-0013\fP
+.RS 4
+Registry check error. This occurs when the \fBbeatmania IIDX INFINITAS\fP launcher cannot find the necessary keys within the Windows Registry. Ensure the following key and values are present in the registry:
+.PP
+  \fBHKLM\\SOFTWARE\\KONAMI\\beatmania IIDX INFINITAS\fP InstallDir
+.br
+  \fBHKLM\\SOFTWARE\\KONAMI\\beatmania IIDX INFINITAS\fP ResourceDir
+.PP
+Remember that because this is Windows, the NT-style paths (C:\\foo\\bar) are required. You can convert Unix paths to Windows paths using \fBwinepath(1)\fP.
+.RE
+.PP
+
+
+.SH "AUTHORS"
+While the Konaste Linux script was written by Mizzt, Bomber Girl was developed by KONAMI Amusement.
+
+
+.SH "SEE ALSO"
+.PP
+\fBkonaste\fP(1),
+\fBwine\fP(1)
