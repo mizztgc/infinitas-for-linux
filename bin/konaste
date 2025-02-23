@@ -538,7 +538,7 @@ launch_game() {
 		export WINEDLLOVERRIDES="${WINEDLLOVERRIDES};d3d9=b;d3d11=b;dxgi=b"
 	fi
 
-	if [[ $noLoopback -ne 0 ]]; then
+	if [[ $noLoopback -ne 1 ]]; then
 		# The BEMANI games require a loopback device for audio to work.
 		# Bomber Girl uses a proper game engine (Unity) and doesn't need such workarounds.
 		# Thanks for making things difficult, konmai!
@@ -590,6 +590,16 @@ launch_game() {
 	[[ "$toPlay" == 'iidx' ]] && echo -e "\n\033[1;95mThank you for playing...\033[0m\n"
 	exit 0 # exit with a code of 0 in case the above fails (this would return a non-zero value, indicating an "error")
 }
+
+
+
+
+
+
+
+
+
+
 
 install_game() {
 	[[ -z "${WGET}" ]] && error "Missing dependency: wget" && exit 1
