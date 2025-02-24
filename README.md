@@ -45,6 +45,13 @@ This script requires the following dependencies: (**NOTE:** The dependency names
 * **xdg-utils** (to handle the login tokens)
 * **wget** (for downloading the needed windows dependencies and of course, the game installers)
 
+### OPTIONAL DEPENDENCIES:
+
+* **gamemode** (to run a specified game with improved performance)
+* **gamescope** (to run a specified game within a microcompositor to workaround some display quirks)
+* **mangohud** (to show performance stats while playing)
+* **msitools** (for silent install via `--silent`)
+
 ## HOW TO INSTALL:
 ### Arch Linux-based Distros (EndeavourOS, Manjaro, etc.)
 
