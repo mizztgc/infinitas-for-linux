@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # change pwd to the directory the script is in
 cd "$(dirname -- $(realpath -- $0))"
